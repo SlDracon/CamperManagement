@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:CamperManagement.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="450"
+        Width="450" Height="420"
+        x:Class="CamperManagement.Views.EditRechnungWindow"
+        Title="EditRechnungWindow"
+        x:DataType="vm:EditRechnungViewModel">
+  <StackPanel Margin="20">
+      <TextBlock Text="Art" Margin="0,10,0,0" />
+      <ComboBox ItemsSource="{Binding Arten}" SelectedItem="{Binding SelectedArt}" />
+
+      <TextBlock Text="Alt" Margin="0,10,0,0" />
+      <TextBox Text="{Binding Alt}" IsReadOnly="True" />
+
+      <TextBlock Text="Neu" Margin="0,10,0,0" />
+      <TextBox Text="{Binding Neu}" />
+
+      <TextBlock Text="Verbrauch" Margin="0,10,0,0" />
+      <TextBlock Text="{Binding Verbrauch}" />
+
+      <TextBlock Text="Faktor" Margin="0,10,0,0" />
+      <TextBox Text="{Binding Faktor}" />
+
+      <TextBlock Text="Betrag" Margin="0,10,0,0" />
+      <TextBlock Text="{Binding Betrag}" />
+
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+          <Button Content="Speichern" Command="{Binding SaveCommand}" />
+          <Button Content="Abbrechen" Click="OnCancelButtonClick" Margin="10,0,0,0" />
+      </StackPanel>
+  </StackPanel>
+</Window>

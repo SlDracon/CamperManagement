@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CamperManagement.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:av="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        mc:Ignorable="d" d:DesignWidth="1050" d:DesignHeight="600"
+        Width="1050" Height="600"
+        x:Class="CamperManagement.Views.MainWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="CamperManagement"
+        x:DataType="vm:MainNavigationViewModel">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <DockPanel>
+          <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+              <TabItem Header="Camper">
+                  <ContentControl Content="{Binding CamperView}" />
+              </TabItem>
+              <TabItem Header="Rechnungen">
+                  <ContentControl Content="{Binding RechnungenView}" />
+              </TabItem>
+          </TabControl>
+        </DockPanel>
+    </ScrollViewer>
+</Window>

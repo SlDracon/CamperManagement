@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:CamperManagement.ViewModels"
+             xmlns:behavior="clr-namespace:CamperManagement.Behavior"
+             mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="450"
+             x:Class="CamperManagement.Views.RechnungenView"
+             x:DataType="vm:RechnungenViewModel">
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+      <vm:RechnungenViewModel />
+    </Design.DataContext>
+    <StackPanel>
+        <!-- Buttons oben -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,0,10">
+            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding OpenAddRechnungCommand}" Margin="0,0,5,0" />
+            <Button Content="Tabelle drucken" Command="{Binding PrintTabelleCommand}" Margin="0,0,5,0" />
+            <Button Content="Rechnungen drucken" Command="{Binding PrintRechnungCommand}" Margin="0,0,5,0" />
+            <TextBlock Text="{Binding StatusMessage}" Margin="0,5,0,0" />
+        </StackPanel>
+
+        <TextBox Watermark="Suche..." Text="{Binding RechnungSearchQuery, Mode=TwoWay}" />
+
+        <DataGrid ItemsSource="{Binding FilteredRechnungenList}"
+                  AutoGenerateColumns="False"
+                  CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
+                  HeadersVisibility="All"
+                  IsReadOnly="True"
+                  SelectionMode="Extended"
+                  GridLinesVisibility="All"
+                  BorderThickness="1" BorderBrush="Gray"
+                  DoubleTapped="OnRechnungDoubleTapped">
+          <Interaction.Behaviors>
+              <behavior:DataGridSelectedItemsBehavior SelectedItems="{Binding SelectedRechnungen}" />
+          </Interaction.Behaviors>
+          <DataGrid.Columns>
+              <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
+              <DataGridTextColumn Header="Platznr" Binding="{Binding Platznr}" />
+              <DataGridTextColumn Header="Alt" Binding="{Binding Alt}" />
+              <DataGridTextColumn Header="Neu" Binding="{Binding Neu}" />
+              <DataGridTextColumn Header="Verbrauch" Binding="{Binding Verbrauch}" />
+              <DataGridTextColumn Header="Faktor" Binding="{Binding Faktor}" />
+              <DataGridTextColumn Header="Betrag" Binding="{Binding Betrag}" />
+              <DataGridTextColumn Header="Jahr" Binding="{Binding Jahr}" />
+              <DataGridTextColumn Header="Art" Binding="{Binding Art}" />
+              <DataGridTextColumn Header="Gedruckt" Binding="{Binding Gedruckt}" />
+          </DataGrid.Columns>
+        </DataGrid>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,24 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:CamperManagement"
+             xmlns:viewModels="clr-namespace:CamperManagement.ViewModels"
+             xmlns:views="clr-namespace:CamperManagement.Views"
+             x:Class="CamperManagement.App"
+             RequestedThemeVariant="Light">
+    <Application.Styles>
+        <FluentTheme  />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    </Application.Styles>
+
+    <Application.DataTemplates>
+        <!-- DataTemplate für MainViewModel -->
+        <DataTemplate DataType="{x:Type viewModels:MainViewModel}">
+            <views:MainView />
+        </DataTemplate>
+
+        <!-- DataTemplate für RechnungenViewModel -->
+        <DataTemplate DataType="{x:Type viewModels:RechnungenViewModel}">
+            <views:RechnungenView />
+        </DataTemplate>
+    </Application.DataTemplates>
+</Application>
