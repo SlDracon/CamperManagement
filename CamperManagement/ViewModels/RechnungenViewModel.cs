@@ -181,7 +181,7 @@ public partial class RechnungenViewModel : ObservableObject
         // Öffne die PDF
         PdfService.OpenPdf(pdfPath);
     }
-
+    
     private async Task PrintRechnungAsync()
     {
         if (SelectedRechnungen == null || !SelectedRechnungen.Any())
@@ -213,15 +213,25 @@ public partial class RechnungenViewModel : ObservableObject
                 WordService.MergeWordDocuments(tempWordFiles, vorlagePath, outputPdfPath);
             });
 
+            // Markiere die Rechnungen als gedruckt in der Datenbank
+            foreach (var rechnung in SelectedRechnungen)
+            {
+                await _dbService.MarkRechnungAsPrintedAsync(rechnung.Id);
+            }
+
             StatusMessage = "PDF erfolgreich erstellt.";
             PdfService.OpenPdf(outputPdfPath);
             StatusMessage = "";
+
+            // Aktualisiere die Rechnungsliste
+            await LoadDataAsync();
         }
         catch (Exception ex)
         {
             StatusMessage = "Fehler beim Drucken der Rechnungen";
         }
     }
+
 
     private void OpenEditRechnungDialog(RechnungDisplayModel rechnung)
     {

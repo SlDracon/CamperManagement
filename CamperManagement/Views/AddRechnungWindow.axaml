@@ -5,8 +5,9 @@
         xmlns:vm="using:CamperManagement.ViewModels"
         mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="450"
         Width="450" Height="600"
+        Icon="/Assets/CamperManagement.ico"
         x:Class="CamperManagement.Views.AddRechnungWindow"
-        Title="AddRechnungWindow"
+        Title="Rechnung anlegen"
         x:DataType="vm:AddRechnungViewModel">
   <StackPanel Margin="20">
       <TextBlock Text="Art" />

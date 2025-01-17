@@ -3,6 +3,7 @@ using CamperManagement.Models;
 using MySqlConnector;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Data;
 
 namespace CamperManagement.Services
 {
@@ -26,7 +27,8 @@ namespace CamperManagement.Services
                 pers.nachname, 
                 pers.strasse, 
                 pers.plz, 
-                pers.ort
+                pers.ort,
+                c.Vertragskosten
             FROM camper c
             JOIN plaetze p ON c.platz_id = p.id
             JOIN camper_personen cp ON c.id = cp.camper_id
@@ -47,7 +49,8 @@ namespace CamperManagement.Services
                     Nachname = reader.GetString("nachname"),
                     Straße = reader.GetString("strasse"),
                     PLZ = reader["plz"].ToString() ?? string.Empty,
-                    Ort = reader.GetString("ort")
+                    Ort = reader.GetString("ort"),
+                    Vertragskosten = reader.GetDecimal("Vertragskosten")
                 });
             }
 
@@ -185,12 +188,13 @@ namespace CamperManagement.Services
 
                 // Füge den Camper in die Tabelle `camper` ein
                 string insertCamperQuery = @"
-            INSERT INTO camper (platz_id, active, created, updated)
+            INSERT INTO camper (platz_id, active, created, updated, Vertragskosten)
             VALUES (
                 (SELECT id FROM plaetze WHERE platznr = @Platznr),
                 @Active,
                 @Created,
-                @Updated
+                @Updated,
+                @Vertragskosten
             );";
 
                 using var insertCamperCommand = new MySqlCommand(insertCamperQuery, connection, transaction);
@@ -198,6 +202,7 @@ namespace CamperManagement.Services
                 insertCamperCommand.Parameters.AddWithValue("@Active", 1);
                 insertCamperCommand.Parameters.AddWithValue("@Created", DateTime.Now);
                 insertCamperCommand.Parameters.AddWithValue("@Updated", DateTime.Now);
+                insertCamperCommand.Parameters.AddWithValue("@Vertragskosten", camper.Vertragskosten);
 
                 await insertCamperCommand.ExecuteNonQueryAsync();
 
@@ -245,7 +250,8 @@ namespace CamperManagement.Services
             pers.nachname = @Nachname, 
             pers.strasse = @Straße, 
             pers.plz = @PLZ, 
-            pers.ort = @Ort,
+            c.Vertragskosten = @Vertragskosten,
+            c.updated = @Updated,
             c.updated = @Updated
         WHERE p.platznr = @Platznr;";
 
@@ -257,6 +263,7 @@ namespace CamperManagement.Services
             command.Parameters.AddWithValue("@Straße", camper.Straße);
             command.Parameters.AddWithValue("@PLZ", camper.PLZ);
             command.Parameters.AddWithValue("@Ort", camper.Ort);
+            command.Parameters.AddWithValue("@Vertragskosten", camper.Vertragskosten);
             command.Parameters.AddWithValue("@Updated", DateTime.Now);
 
             await command.ExecuteNonQueryAsync();
@@ -294,7 +301,8 @@ namespace CamperManagement.Services
             pers.vorname,
             pers.nachname,
             SUM(CASE WHEN r.type = 'Wasser' THEN r.betrag ELSE 0 END) AS wasser_betrag,
-            SUM(CASE WHEN r.type = 'Strom' THEN r.betrag ELSE 0 END) AS strom_betrag
+            SUM(CASE WHEN r.type = 'Strom' THEN r.betrag ELSE 0 END) AS strom_betrag,
+            c.Vertragskosten
         FROM rechnungen r
         JOIN camper c ON r.platz_id = c.platz_id
         JOIN camper_personen cp ON c.id = cp.camper_id
@@ -318,11 +326,28 @@ namespace CamperManagement.Services
                     Vorname = reader.GetString("vorname"),
                     Nachname = reader.GetString("nachname"),
                     WasserBetrag = reader.GetDecimal("wasser_betrag"),
-                    StromBetrag = reader.GetDecimal("strom_betrag")
+                    StromBetrag = reader.GetDecimal("strom_betrag"),
+                    Vertragskosten = reader.GetDecimal("Vertragskosten")
                 });
             }
 
             return kostenEintraege;
+        }
+
+        public async Task MarkRechnungAsPrintedAsync(int rechnungId)
+        {
+            using var connection = new MySqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            string query = @"
+        UPDATE rechnungen
+        SET printed = 1
+        WHERE id = @RechnungId";
+
+            using var command = new MySqlCommand(query, connection);
+            command.Parameters.AddWithValue("@RechnungId", rechnungId);
+
+            await command.ExecuteNonQueryAsync();
         }
 
         public async Task AddRechnungAsync(Rechnung rechnung)

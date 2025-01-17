@@ -45,16 +45,17 @@ namespace CamperManagement.Services
             document.Add(new Paragraph(" "));
 
             // Tabelle erstellen
-            var table = new Table(new float[] { 2, 3, 3, 2, 2, 2 })
+            var table = new Table(new float[] { 2, 3, 3, 2, 2, 2, 1 })
                 .SetWidth(UnitValue.CreatePercentValue(100));
 
             // Kopfzeile hinzufügen
-            table.AddHeaderCell(new Cell().Add(new Paragraph("PlatzNr").SetFont(boldFont)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Vorname").SetFont(boldFont)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Nachname").SetFont(boldFont)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Wasser-Betrag").SetFont(boldFont)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Strom-Betrag").SetFont(boldFont)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Gesamtbetrag").SetFont(boldFont)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("PlatzNr").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Vorname").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Nachname").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Wasser-betrag").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Strom-betrag").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Gesamt-betrag").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Vertrags-kosten").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
 
             // Zeilen hinzufügen
             foreach (var eintrag in eintraege)
@@ -62,9 +63,10 @@ namespace CamperManagement.Services
                 table.AddCell(new Cell().Add(new Paragraph(eintrag.PlatzNr).SetFont(regularFont)));
                 table.AddCell(new Cell().Add(new Paragraph(eintrag.Vorname).SetFont(regularFont)));
                 table.AddCell(new Cell().Add(new Paragraph(eintrag.Nachname).SetFont(regularFont)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.WasserBetrag:0.00} €").SetFont(regularFont)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.StromBetrag:0.00} €").SetFont(regularFont)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.Gesamtbetrag:0.00} €").SetFont(regularFont)));
+                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.WasserBetrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.StromBetrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.Gesamtbetrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.Vertragskosten:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
             }
 
             document.Add(table);

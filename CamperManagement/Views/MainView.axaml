@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:CamperManagement.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="450"
              x:Class="CamperManagement.Views.MainView"
              x:DataType="vm:MainViewModel">
   <Design.DataContext>
@@ -30,6 +30,7 @@
                   SelectionMode="Single"
                   DoubleTapped="OnCamperDoubleTapped"
                   GridLinesVisibility="All"
+                  Focusable="False"
                   BorderThickness="1" BorderBrush="Gray">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Platznr" Binding="{Binding Platznr}" />
@@ -39,6 +40,7 @@
                 <DataGridTextColumn Header="Straße" Binding="{Binding Straße}" />
                 <DataGridTextColumn Header="PLZ" Binding="{Binding PLZ}" />
                 <DataGridTextColumn Header="Ort" Binding="{Binding Ort}" />
+                <DataGridTextColumn Header="Vertragskosten" Binding="{Binding Vertragskosten}" />
             </DataGrid.Columns>
         </DataGrid>
     </StackPanel>

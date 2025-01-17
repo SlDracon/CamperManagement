@@ -40,4 +40,10 @@
     <PackageReference Include="MySqlConnector" />
     <PackageReference Include="PresentationFramework" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Update="Assets\CamperManagement.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AvaloniaResource>
+  </ItemGroup>
 </Project>

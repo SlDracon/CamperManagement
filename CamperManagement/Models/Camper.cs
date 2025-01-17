@@ -14,5 +14,6 @@ namespace CamperManagement.Models
         public DateTime Created { get; set; }
         public DateTime Updated { get; set; }
         public DateTime Deactivated { get; set; }
+        public decimal Vertragskosten { get; set; }
     }
 }

@@ -14,5 +14,6 @@ namespace CamperManagement.Models
         public decimal WasserBetrag { get; set; }
         public decimal StromBetrag { get; set; }
         public decimal Gesamtbetrag => WasserBetrag + StromBetrag;
+        public decimal Vertragskosten;
     }
 }

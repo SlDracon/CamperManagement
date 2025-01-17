@@ -4,8 +4,10 @@
         xmlns:vm="using:CamperManagement.ViewModels"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Width="400" Height="550"
+        Icon="/Assets/CamperManagement.ico"
         x:Class="CamperManagement.Views.EditCamperWindow"
-        Title="EditCamperWindow"
+        Title="Camper bearbeiten"
         x:DataType="vm:EditCamperViewModel">
     <StackPanel Margin="20">
         <TextBlock Text="Platznummer" />
@@ -28,6 +30,9 @@
 
         <TextBlock Text="Ort" Margin="0,10,0,0" />
         <TextBox Text="{Binding Ort}" />
+
+        <TextBlock Text="Vertragskosten" Margin="0,10,0,0" />
+        <TextBox Text="{Binding Vertragskosten}" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="Speichern" Command="{Binding SaveCommand}" />

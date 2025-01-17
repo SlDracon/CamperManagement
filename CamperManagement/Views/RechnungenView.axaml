@@ -31,6 +31,7 @@
                   IsReadOnly="True"
                   SelectionMode="Extended"
                   GridLinesVisibility="All"
+                  Focusable="False"
                   BorderThickness="1" BorderBrush="Gray"
                   DoubleTapped="OnRechnungDoubleTapped">
           <Interaction.Behaviors>

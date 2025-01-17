@@ -15,5 +15,6 @@ namespace CamperManagement.Models
         public string Straße { get; set; }
         public string PLZ { get; set; }
         public string Ort { get; set; }
+        public decimal Vertragskosten { get; set; }
     }
 }

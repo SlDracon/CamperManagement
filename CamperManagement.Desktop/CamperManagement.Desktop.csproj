@@ -11,6 +11,7 @@
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UseWPF>False</UseWPF>
+    <ApplicationIcon>CamperManagement.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,5 +25,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CamperManagement\CamperManagement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Remove="Designer.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="CamperManagement.ico" />
   </ItemGroup>
 </Project>
