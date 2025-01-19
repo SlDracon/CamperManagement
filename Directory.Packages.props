@@ -20,7 +20,9 @@
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.2.0" />
     <PackageVersion Include="itext" Version="9.0.0" />
     <PackageVersion Include="itext.bouncy-castle-adapter" Version="9.0.0" />
+    <PackageVersion Include="itext.pdfhtml" Version="6.0.0" />
     <PackageVersion Include="itext7" Version="9.0.0" />
+    <PackageVersion Include="itext7.pdfhtml" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Office.Interop.Word" Version="15.0.4797.1004" />
     <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="PresentationFramework" Version="4.6.0" />

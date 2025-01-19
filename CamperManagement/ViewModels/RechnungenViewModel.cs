@@ -1,15 +1,16 @@
-﻿using CamperManagement.Models;
-using CamperManagement.Services;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+﻿using System;
 using System.Collections.Generic;
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using CamperManagement.Models;
+using CamperManagement.Services;
 using CamperManagement.Views;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace CamperManagement.ViewModels;
 
@@ -17,20 +18,15 @@ public partial class RechnungenViewModel : ObservableObject
 {
     private readonly DatabaseService _dbService;
 
-    [ObservableProperty]
-    private ObservableCollection<RechnungDisplayModel> rechnungenList = new();
+    [ObservableProperty] private ObservableCollection<RechnungDisplayModel> filteredRechnungenList = new();
 
-    [ObservableProperty]
-    private ObservableCollection<RechnungDisplayModel> filteredRechnungenList = new();
+    [ObservableProperty] private ObservableCollection<RechnungDisplayModel> rechnungenList = new();
 
-    [ObservableProperty]
-    private string rechnungSearchQuery = string.Empty;
+    [ObservableProperty] private string rechnungSearchQuery = string.Empty;
 
-    [ObservableProperty]
-    private ObservableCollection<RechnungDisplayModel> selectedRechnungen = new();
+    [ObservableProperty] private ObservableCollection<RechnungDisplayModel> selectedRechnungen = new();
 
-    [ObservableProperty]
-    private string statusMessage;
+    [ObservableProperty] private string statusMessage;
 
     public RechnungenViewModel()
     {
@@ -44,10 +40,7 @@ public partial class RechnungenViewModel : ObservableObject
         );
 
         // Beobachte Änderungen an der Auswahl
-        SelectedRechnungen.CollectionChanged += (_, _) =>
-        {
-            PrintRechnungCommand.NotifyCanExecuteChanged();
-        };
+        SelectedRechnungen.CollectionChanged += (_, _) => { PrintRechnungCommand.NotifyCanExecuteChanged(); };
         PrintTabelleCommand = new AsyncRelayCommand(PrintTabelleAsync);
 
         // Initialisiere die gefilterte Liste
@@ -67,10 +60,7 @@ public partial class RechnungenViewModel : ObservableObject
     {
         RechnungenList.Clear();
         var rechnungen = await _dbService.GetRechnungenAsync();
-        foreach (var rechnung in rechnungen)
-        {
-            RechnungenList.Add(rechnung);
-        }
+        foreach (var rechnung in rechnungen) RechnungenList.Add(rechnung);
 
         // Initiale Filterung
         FilterRechnungenList();
@@ -117,34 +107,25 @@ public partial class RechnungenViewModel : ObservableObject
         var currentTerm = string.Empty;
 
         foreach (var c in query)
-        {
             if (c == '"')
             {
                 inQuotes = !inQuotes;
-                if (!inQuotes && !string.IsNullOrEmpty(currentTerm))
-                {
-                    terms.Add(currentTerm);
-                    currentTerm = string.Empty;
-                }
+                if (inQuotes || string.IsNullOrEmpty(currentTerm)) continue;
+                terms.Add(currentTerm);
+                currentTerm = string.Empty;
             }
             else if (char.IsWhiteSpace(c) && !inQuotes)
             {
-                if (!string.IsNullOrEmpty(currentTerm))
-                {
-                    terms.Add(currentTerm);
-                    currentTerm = string.Empty;
-                }
+                if (string.IsNullOrEmpty(currentTerm)) continue;
+                terms.Add(currentTerm);
+                currentTerm = string.Empty;
             }
             else
             {
                 currentTerm += c;
             }
-        }
 
-        if (!string.IsNullOrEmpty(currentTerm))
-        {
-            terms.Add(currentTerm);
-        }
+        if (!string.IsNullOrEmpty(currentTerm)) terms.Add(currentTerm);
 
         return terms;
     }
@@ -154,14 +135,14 @@ public partial class RechnungenViewModel : ObservableObject
         var viewModel = new AddRechnungViewModel(new DatabaseService())
         {
             // Füge die neue Rechnung direkt zur Liste hinzu
-            OnRechnungAdded = () =>
-            {
-                _ = LoadDataAsync();
-            }
+            OnRechnungAdded = () => { _ = LoadDataAsync(); }
         };
         var addRechnungWindow = new AddRechnungWindow(viewModel);
 
-        addRechnungWindow.ShowDialog(Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        addRechnungWindow.ShowDialog(
+            Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null);
     }
 
     private async Task PrintTabelleAsync()
@@ -170,10 +151,8 @@ public partial class RechnungenViewModel : ObservableObject
         var filteredRechnungen = FilteredRechnungenList;
 
         if (filteredRechnungen.Count == 0)
-        {
             // Keine Daten verfügbar
             return;
-        }
 
         // Erstelle die PDF
         var pdfPath = await PdfService.GenerateTabellePdfAsync(filteredRechnungen);
@@ -181,19 +160,13 @@ public partial class RechnungenViewModel : ObservableObject
         // Öffne die PDF
         PdfService.OpenPdf(pdfPath);
     }
-    
+
     private async Task PrintRechnungAsync()
     {
         if (SelectedRechnungen == null || !SelectedRechnungen.Any())
-        {
             return;
-        }
 
-        // Pfade zu den Vorlagen und dem Ziel
-        var exePath = AppDomain.CurrentDomain.BaseDirectory;
-        var wasserTemplatePath = Path.Combine(exePath, "rechnung_wasser.docx");
-        var stromTemplatePath = Path.Combine(exePath, "rechnung_strom.docx");
-        var vorlagePath = Path.Combine(exePath, "rechnung_vorlage.docx");
+        // Erzeuge eindeutigen Dateinamen für die zusammengeführte PDF
         var outputPdfPath = Path.Combine(Path.GetTempPath(), $"Rechnungen_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
 
         try
@@ -203,14 +176,12 @@ public partial class RechnungenViewModel : ObservableObject
             // Starte den Prozess in einem separaten Thread
             await Task.Run(async () =>
             {
-                var tempWordFiles = await WordService.GenerateWordFilesForRechnungenAsync(
+                // Übergib die Rechnungen an den PdfService
+                await PdfService.GenerateAndMergeRechnungenAsync(
                     SelectedRechnungen,
-                    wasserTemplatePath,
-                    stromTemplatePath,
-                    message => StatusMessage = message);
-
-                StatusMessage = "Rechnungen werden zusammengeführt und als PDF gespeichert...";
-                WordService.MergeWordDocuments(tempWordFiles, vorlagePath, outputPdfPath);
+                    outputPdfPath,
+                    status => StatusMessage = status // Aktualisiere Statusnachrichten
+                );
             });
 
             // Markiere die Rechnungen als gedruckt in der Datenbank
@@ -229,6 +200,7 @@ public partial class RechnungenViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = "Fehler beim Drucken der Rechnungen";
+            Console.WriteLine(ex);
         }
     }
 
@@ -240,15 +212,15 @@ public partial class RechnungenViewModel : ObservableObject
         var viewModel = new EditRechnungViewModel(new DatabaseService(), rechnung)
         {
             // Füge die neue Rechnung direkt zur Liste hinzu
-            OnRechnungChanged = () =>
-            {
-                _ = LoadDataAsync();
-            }
+            OnRechnungChanged = () => { _ = LoadDataAsync(); }
         };
 
         var editRechnungWindow = new EditRechnungWindow(viewModel);
 
         viewModel.CloseAction = () => editRechnungWindow.Close();
-        editRechnungWindow.ShowDialog(Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        editRechnungWindow.ShowDialog(
+            Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null);
     }
 }
