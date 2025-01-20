@@ -237,7 +237,7 @@ namespace CamperManagement.Services
                     .SetFontSize(14)
                     .SetTextAlignment(TextAlignment.CENTER));
 
-                document.Add(new Paragraph("Inhaber Andreas Heim")
+                document.Add(new Paragraph("Inhaber Andreas Heim").SetMarginTop(-5)
                     .SetFont(regularFont)
                     .SetFontSize(12)
                     .SetTextAlignment(TextAlignment.CENTER));
@@ -245,10 +245,11 @@ namespace CamperManagement.Services
                 document.Add(new Paragraph(" "));
 
                 // Tabelle für oberen Bereich erstellen
-                var table = new Table(UnitValue.CreatePercentArray(new float[] { 1, 1 })).UseAllAvailableWidth();
+                var table = new Table(UnitValue.CreatePercentArray(new float[] { 5, 3 })).UseAllAvailableWidth();
 
                 // Linke Zellen für Adresse
                 var addressTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
+                addressTable.AddCell(new Cell().Add(new Paragraph("Strandbetriebe August Heim * Am Strande 25 * 23730 Neustadt").SetFont(regularFont).SetFontSize(7)).SetBorder(Border.NO_BORDER));
                 addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Anrede).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
                 addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Vorname} {rechnung.Nachname}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
                 addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Straße).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
@@ -257,12 +258,15 @@ namespace CamperManagement.Services
 
                 // Rechte Zellen für Details
                 var detailsTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
-                detailsTable.AddCell(new Cell().Add(new Paragraph("Am Strande 25").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph("23730 Neustadt").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph("Tel.: 04561/2017").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph("St.-Nr.: 2504700595").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph($"Neustadt, den {DateTime.Now:dd.MM.yyyy}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                table.AddCell(new Cell().Add(detailsTable).SetTextAlignment(TextAlignment.RIGHT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph("Am Strande 25").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph("23730 Neustadt").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph("Tel.: 04561/2017").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph("St.-Nr.: 2504700595").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                detailsTable.AddCell(new Cell().Add(new Paragraph($"Neustadt, den {DateTime.Now:dd.MM.yyyy}").SetFont(regularFont).SetFontSize(11)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+                table.AddCell(new Cell().Add(detailsTable).SetBorder(Border.NO_BORDER));
 
                 document.Add(table);
 
@@ -270,7 +274,7 @@ namespace CamperManagement.Services
                 if (rechnung.Art == "Strom")
                 {
                     // Überschrift für Rechnungsdetails
-                    document.Add(new Paragraph($"Stromverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(30)
+                    document.Add(new Paragraph($"Stromverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(50)
                         .SetFont(boldFont)
                         .SetFontSize(12)
                         .SetTextAlignment(TextAlignment.LEFT).SetMarginBottom(10));
@@ -278,7 +282,7 @@ namespace CamperManagement.Services
                 else
                 {
                     // Überschrift für Rechnungsdetails
-                    document.Add(new Paragraph($"Wasserverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(30)
+                    document.Add(new Paragraph($"Wasserverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(50)
                         .SetFont(boldFont)
                         .SetFontSize(12)
                         .SetTextAlignment(TextAlignment.LEFT).SetMarginBottom(10));
