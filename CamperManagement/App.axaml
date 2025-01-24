@@ -1,6 +1,5 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:CamperManagement"
              xmlns:viewModels="clr-namespace:CamperManagement.ViewModels"
              xmlns:views="clr-namespace:CamperManagement.Views"
              x:Class="CamperManagement.App"
@@ -15,8 +14,11 @@
         <DataTemplate DataType="{x:Type viewModels:MainViewModel}">
             <views:MainView />
         </DataTemplate>
-
-        <!-- DataTemplate für RechnungenViewModel -->
+        <!-- CamperViewModel -> CamperView -->
+        <DataTemplate DataType="{x:Type viewModels:CamperViewModel}">
+            <views:CamperView />
+        </DataTemplate>
+        <!-- RechnungenViewModel -> RechnungenView -->
         <DataTemplate DataType="{x:Type viewModels:RechnungenViewModel}">
             <views:RechnungenView />
         </DataTemplate>

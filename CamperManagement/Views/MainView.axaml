@@ -11,38 +11,16 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
     <vm:MainViewModel />
   </Design.DataContext>
-    <StackPanel>
-        <!-- Buttons oben -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,0,10">
-            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding AddCamperCommand}" Margin="0,0,5,0" />
-            <Button Content="Kosten drucken" Command="{Binding PrintCommand}" Margin="0,0,5,0" />
-            <Button Content="Ablesetabelle drucken" Command="{Binding PrintAblesetabelleCommand}" />
-        </StackPanel>
-
-        <TextBox Watermark="Suche..." Text="{Binding CamperSearchQuery, Mode=TwoWay}" />
-
-        <DataGrid ItemsSource="{Binding FilteredCamperList}" 
-                  AutoGenerateColumns="False"
-                  CanUserSortColumns="True"
-                  CanUserResizeColumns="True"
-                  HeadersVisibility="All"
-                  IsReadOnly="True"
-                  SelectionMode="Single"
-                  DoubleTapped="OnCamperDoubleTapped"
-                  GridLinesVisibility="All"
-                  Focusable="False"
-                  BorderThickness="1" BorderBrush="Gray">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Platznr" Binding="{Binding Platznr}" />
-                <DataGridTextColumn Header="Anrede" Binding="{Binding Anrede}" />
-                <DataGridTextColumn Header="Vorname" Binding="{Binding Vorname}" />
-                <DataGridTextColumn Header="Nachname" Binding="{Binding Nachname}" />
-                <DataGridTextColumn Header="Straße" Binding="{Binding Straße}" />
-                <DataGridTextColumn Header="PLZ" Binding="{Binding PLZ}" />
-                <DataGridTextColumn Header="Ort" Binding="{Binding Ort}" />
-                <DataGridTextColumn Header="Vertragskosten" Binding="{Binding Vertragskosten}" />
-            </DataGrid.Columns>
-        </DataGrid>
-    </StackPanel>
-
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <DockPanel>
+            <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+                <TabItem Header="Camper">
+                    <ContentControl Content="{Binding CamperView}" />
+                </TabItem>
+                <TabItem Header="Rechnungen">
+                    <ContentControl Content="{Binding RechnungenView}" />
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+    </ScrollViewer>
 </UserControl>

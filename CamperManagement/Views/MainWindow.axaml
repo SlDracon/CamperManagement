@@ -9,17 +9,6 @@
         x:Class="CamperManagement.Views.MainWindow"
         Icon="/Assets/CamperManagement.ico"
         Title="CamperManagement"
-        x:DataType="vm:MainNavigationViewModel">
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <DockPanel>
-          <TabControl SelectedIndex="{Binding SelectedTabIndex}">
-              <TabItem Header="Camper">
-                  <ContentControl Content="{Binding CamperView}" />
-              </TabItem>
-              <TabItem Header="Rechnungen">
-                  <ContentControl Content="{Binding RechnungenView}" />
-              </TabItem>
-          </TabControl>
-        </DockPanel>
-    </ScrollViewer>
+        x:DataType="vm:MainWindowViewModel">
+    <ContentControl Content="{Binding MainView}" />
 </Window>
