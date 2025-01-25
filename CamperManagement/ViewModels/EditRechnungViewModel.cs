@@ -13,16 +13,17 @@ namespace CamperManagement.ViewModels
 {
     public partial class EditRechnungViewModel : ObservableObject
     {
+        private readonly MainViewModel _mainViewModel;
         private readonly DatabaseService _dbService;
 
         public ObservableCollection<string> Arten { get; } = new() { "Strom", "Wasser" };
         public ObservableCollection<string> Platznummern { get; } = new();
 
         [ObservableProperty]
-        private string selectedArt;
+        private string? selectedArt;
 
         [ObservableProperty]
-        private string selectedPlatznummer;
+        private string? selectedPlatznummer;
 
         [ObservableProperty]
         private decimal alt;
@@ -42,8 +43,9 @@ namespace CamperManagement.ViewModels
         [ObservableProperty]
         private int jahr;
 
-        public EditRechnungViewModel(DatabaseService dbService, RechnungDisplayModel rechnung)
+        public EditRechnungViewModel(MainViewModel mainViewModel, DatabaseService dbService, RechnungDisplayModel rechnung)
         {
+            _mainViewModel = mainViewModel;
             _dbService = dbService;
 
             // Initialisiere die Werte
@@ -76,12 +78,11 @@ namespace CamperManagement.ViewModels
             };
 
             SaveCommand = new AsyncRelayCommand(SaveAsync);
-            CancelCommand = new RelayCommand(() => CloseAction?.Invoke());
+            CancelCommand = new AsyncRelayCommand(Cancel);
         }
 
         public IAsyncRelayCommand SaveCommand { get; }
-        public RelayCommand CancelCommand { get; }
-        public Action? CloseAction { get; set; }
+        public IAsyncRelayCommand CancelCommand { get; }
         public Action? OnRechnungChanged { get; set; }
 
         private void UpdateFaktor()
@@ -112,7 +113,18 @@ namespace CamperManagement.ViewModels
 
             await _dbService.UpdateRechnungAsync(updatedRechnung);
             OnRechnungChanged?.Invoke();
-            CloseAction?.Invoke();
+            await Cancel();
+        }
+
+        private Task Cancel()
+        {
+            // Rufe NavigateBackCommand aus MainViewModel auf
+            if (_mainViewModel.CanNavigateBack)
+            {
+                _mainViewModel.NavigateBackCommand.Execute(null);
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

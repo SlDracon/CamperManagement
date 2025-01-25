@@ -6,21 +6,22 @@
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="450"
              x:Class="CamperManagement.Views.MainView"
              x:DataType="vm:MainViewModel">
-  <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-    <vm:MainViewModel />
-  </Design.DataContext>
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <DockPanel>
-            <TabControl SelectedIndex="{Binding SelectedTabIndex}">
-                <TabItem Header="Camper">
-                    <ContentControl Content="{Binding CamperView}" />
-                </TabItem>
-                <TabItem Header="Rechnungen">
-                    <ContentControl Content="{Binding RechnungenView}" />
-                </TabItem>
-            </TabControl>
-        </DockPanel>
-    </ScrollViewer>
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+  <DockPanel>
+      <!-- Zurück-Button -->
+      <Button Content="←"
+              Command="{Binding NavigateBackCommand}"
+              IsVisible="{Binding CanNavigateBack}"
+              DockPanel.Dock="Top"
+              HorizontalAlignment="Left"
+              Margin="10" />
+
+      <!-- Dynamischer Inhalt -->
+      <ScrollViewer>
+          <ContentControl Content="{Binding CurrentView}" />
+      </ScrollViewer>
+  </DockPanel>
 </UserControl>

@@ -15,18 +15,37 @@ using System.Text;
 using iText.Kernel.Geom;
 using iText.Layout.Borders;
 using Path = System.IO.Path;
+using Avalonia.Controls;
+using Border = iText.Layout.Borders.Border;
+using Avalonia.Platform.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace CamperManagement.Services
 {
     public static class PdfService
     {
-        public static async Task<string> GenerateKostenPdfAsync(int jahr, List<KostenEintrag> eintraege)
+        public static async Task<string> GenerateKostenPdfAsync(TopLevel? toplevel, int jahr, List<KostenEintrag> eintraege)
         {
-            // Erzeuge einen eindeutigen Dateinamen mit Zeitstempel
+            var storageProvider = toplevel.StorageProvider;
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var tempPath = Path.Combine(Path.GetTempPath(), $"Kosten_{jahr}_{timestamp}.pdf");
+            var filename = $"Kosten_{jahr}_{timestamp}.pdf";
+            // Speichern-Dialog anzeigen
+            var options = new FilePickerSaveOptions
+            {
+                SuggestedFileName = filename,
+                ShowOverwritePrompt = true,
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("PDF Files") { Patterns = ["*.pdf"] }
+                ]
+            };
 
-            using var writer = new PdfWriter(tempPath);
+            var result = await storageProvider.SaveFilePickerAsync(options);
+            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
+            // Schreibe den Inhalt in die Datei
+            await using var stream = await result.OpenWriteAsync();
+            await using var writer = new PdfWriter(stream);
             using var pdf = new PdfDocument(writer);
             var document = new Document(pdf);
 
@@ -45,7 +64,7 @@ namespace CamperManagement.Services
             document.Add(new Paragraph(" "));
 
             // Tabelle erstellen
-            var table = new Table(new float[] { 2, 3, 3, 2, 2, 2, 1 })
+            var table = new Table([2, 3, 3, 2, 2, 2, 1])
                 .SetWidth(UnitValue.CreatePercentValue(100));
 
             // Kopfzeile hinzufügen
@@ -72,15 +91,30 @@ namespace CamperManagement.Services
             document.Add(table);
             document.Close();
 
-            return tempPath;
+            return pdfPath ?? string.Empty;
         }
 
-        public static async Task<string> GenerateTabellePdfAsync(IEnumerable<RechnungDisplayModel> rechnungen)
+        public static async Task<string> GenerateTabellePdfAsync(TopLevel? toplevel, IEnumerable<RechnungDisplayModel> rechnungen)
         {
-            // Generiere einen eindeutigen Dateinamen
-            var tempPath = Path.Combine(Path.GetTempPath(), $"Tabelle_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+            var storageProvider = toplevel.StorageProvider;
+            var filename = $"Tabelle_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            // Speichern-Dialog anzeigen
+            var options = new FilePickerSaveOptions
+            {
+                SuggestedFileName = filename,
+                ShowOverwritePrompt = true,
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("PDF Files") { Patterns = ["*.pdf"] }
+                ]
+            };
 
-            using var writer = new PdfWriter(tempPath);
+            var result = await storageProvider.SaveFilePickerAsync(options);
+            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
+            // Schreibe den Inhalt in die Datei
+            await using var stream = await result.OpenWriteAsync();
+            await using var writer = new PdfWriter(stream);
             using var pdf = new PdfDocument(writer);
             var document = new Document(pdf);
             var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
@@ -94,7 +128,7 @@ namespace CamperManagement.Services
             document.Add(new Paragraph(" ")); // Leere Zeile
 
             // Tabelle
-            var table = new Table(new float[] { 2, 3, 3, 2, 2, 2, 2 }).UseAllAvailableWidth();
+            var table = new Table([2, 3, 3, 2, 2, 2, 2]).UseAllAvailableWidth();
             table.AddHeaderCell("PlatzNr");
             table.AddHeaderCell("Vorname");
             table.AddHeaderCell("Nachname");
@@ -118,14 +152,30 @@ namespace CamperManagement.Services
             document.Add(table);
             document.Close();
 
-            return tempPath;
+            return pdfPath ?? string.Empty;
         }
 
-        public static async Task<string> GenerateAbleseTabellePdfAsync(IEnumerable<AbleseEintrag> ableseEintraege)
+        public static async Task<string> GenerateAbleseTabellePdfAsync(TopLevel? toplevel, IEnumerable<AbleseEintrag> ableseEintraege)
         {
-            var tempPath = Path.Combine(Path.GetTempPath(), $"AbleseTabelle_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+            var storageProvider = toplevel.StorageProvider;
+            var filename = $"AbleseTabelle_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            // Speichern-Dialog anzeigen
+            var options = new FilePickerSaveOptions
+            {
+                SuggestedFileName = filename,
+                ShowOverwritePrompt = true,
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("PDF Files") { Patterns = ["*.pdf"] }
+                ]
+            };
 
-            using var writer = new PdfWriter(tempPath);
+            var result = await storageProvider.SaveFilePickerAsync(options);
+            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
+            // Schreibe den Inhalt in die Datei
+            await using var stream = await result.OpenWriteAsync();
+            await using var writer = new PdfWriter(stream);
             using var pdf = new PdfDocument(writer);
             var document = new Document(pdf);
             var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
@@ -139,7 +189,7 @@ namespace CamperManagement.Services
             document.Add(new Paragraph(" ")); // Leerzeile
 
             // Tabelle erstellen
-            var table = new Table(new float[] { 2, 3, 3, 2, 2, 2, 2 }).UseAllAvailableWidth();
+            var table = new Table([2, 3, 3, 2, 2, 2, 2]).UseAllAvailableWidth();
             table.AddHeaderCell("PlatzNr");
             table.AddHeaderCell("Vorname");
             table.AddHeaderCell("Nachname");
@@ -161,20 +211,40 @@ namespace CamperManagement.Services
             document.Add(table);
             document.Close();
 
-            return tempPath;
+            return pdfPath ?? string.Empty;
         }
 
-        public static async Task GenerateAndMergeRechnungenAsync(
+        public static async Task<string> GenerateAndMergeRechnungenAsync(
+            TopLevel? toplevel,
             IEnumerable<RechnungDisplayModel> rechnungen,
-            string outputPath,
-            Action<string> updateStatus)
+            Action<string?> updateStatus)
         {
             var tempPdfPaths = new List<string>();
 
+            var storageProvider = toplevel.StorageProvider;
+            var filename = $"Rechnungen_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            // Speichern-Dialog anzeigen
+            var options = new FilePickerSaveOptions
+            {
+                SuggestedFileName = filename,
+                ShowOverwritePrompt = true,
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("PDF Files") { Patterns = ["*.pdf"] }
+                ]
+            };
+
+            var result = await storageProvider.SaveFilePickerAsync(options);
+            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
+            // Schreibe den Inhalt in die Datei
+            await using var stream = await result.OpenWriteAsync();
+            await using var writer = new PdfWriter(stream);
+
             try
             {
-                int total = rechnungen.Count();
-                int current = 0;
+                var total = rechnungen.Count();
+                var current = 0;
 
                 foreach (var rechnung in rechnungen)
                 {
@@ -182,14 +252,13 @@ namespace CamperManagement.Services
                     updateStatus($"Rechnung {current}/{total} wird generiert...");
 
                     // Generiere die PDF für die Rechnung
-                    string tempPdfPath = GenerateRechnungPdf(rechnung);
+                    var tempPdfPath = GenerateRechnungPdf(rechnung);
                     tempPdfPaths.Add(tempPdfPath);
                 }
 
                 updateStatus("Rechnungen werden zusammengeführt...");
 
                 // Merge die temporären PDFs
-                using var writer = new PdfWriter(outputPath);
                 using var mergedPdf = new PdfDocument(writer);
 
                 foreach (var path in tempPdfPaths)
@@ -204,151 +273,157 @@ namespace CamperManagement.Services
             finally
             {
                 // Lösche temporäre Dateien
-                foreach (var tempPath in tempPdfPaths)
+                foreach (var tempPath in tempPdfPaths.Where(File.Exists))
                 {
-                    if (File.Exists(tempPath))
-                        File.Delete(tempPath);
+                    File.Delete(tempPath);
                 }
             }
+
+            return pdfPath ?? string.Empty;
         }
 
         public static string GenerateRechnungPdf(RechnungDisplayModel rechnung)
         {
             // Erzeuge einen eindeutigen Dateinamen
-            string tempPath = Path.Combine(
-                Path.GetTempPath(),
+            var tempPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                 $"Rechnung_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}.pdf"
             );
 
-            using (var writer = new PdfWriter(tempPath))
-            using (var pdf = new PdfDocument(writer))
+            using var writer = new PdfWriter(tempPath);
+            using var pdf = new PdfDocument(writer);
+            // A5-Seitengröße definieren
+            pdf.SetDefaultPageSize(PageSize.A5);
+            var document = new Document(pdf);
+
+            // Schriftarten definieren
+            var boldFont = PdfFontFactory.CreateFont(StandardFonts.TIMES_BOLD);
+            var regularFont = PdfFontFactory.CreateFont(StandardFonts.TIMES_ROMAN);
+
+            // Kopfzeile
+            document.Add(new Paragraph("Strandbetriebe August Heim")
+                .SetFont(boldFont)
+                .SetFontSize(14)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            document.Add(new Paragraph("Inhaber Andreas Heim").SetMarginTop(-5)
+                .SetFont(regularFont)
+                .SetFontSize(12)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            document.Add(new Paragraph(" "));
+
+            // Tabelle für oberen Bereich erstellen
+            var table = new Table(UnitValue.CreatePercentArray([5, 3])).UseAllAvailableWidth();
+
+            // Linke Zellen für Adresse
+            var addressTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
+            addressTable.AddCell(new Cell().Add(new Paragraph("Strandbetriebe August Heim * Am Strande 25 * 23730 Neustadt").SetFont(regularFont).SetFontSize(7)).SetBorder(Border.NO_BORDER));
+            addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Anrede).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Vorname} {rechnung.Nachname}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Straße).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.PLZ} {rechnung.Ort}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            table.AddCell(new Cell().Add(addressTable).SetBorder(Border.NO_BORDER));
+
+            // Rechte Zellen für Details
+            var detailsTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
+            detailsTable.AddCell(new Cell().Add(new Paragraph("Am Strande 25").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph("23730 Neustadt").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph("Tel.: 04561/2017").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph("St.-Nr.: 2504700595").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            detailsTable.AddCell(new Cell().Add(new Paragraph($"Neustadt, den {DateTime.Now:dd.MM.yyyy}").SetFont(regularFont).SetFontSize(11)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
+            table.AddCell(new Cell().Add(detailsTable).SetBorder(Border.NO_BORDER));
+
+            document.Add(table);
+
+            document.Add(new Paragraph(" "));
+            if (rechnung.Art == "Strom")
             {
-                // A5-Seitengröße definieren
-                pdf.SetDefaultPageSize(PageSize.A5);
-                var document = new Document(pdf);
-
-                // Schriftarten definieren
-                var boldFont = PdfFontFactory.CreateFont(StandardFonts.TIMES_BOLD);
-                var regularFont = PdfFontFactory.CreateFont(StandardFonts.TIMES_ROMAN);
-
-                // Kopfzeile
-                document.Add(new Paragraph("Strandbetriebe August Heim")
+                // Überschrift für Rechnungsdetails
+                document.Add(new Paragraph($"Stromverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(50)
                     .SetFont(boldFont)
-                    .SetFontSize(14)
-                    .SetTextAlignment(TextAlignment.CENTER));
-
-                document.Add(new Paragraph("Inhaber Andreas Heim").SetMarginTop(-5)
-                    .SetFont(regularFont)
                     .SetFontSize(12)
-                    .SetTextAlignment(TextAlignment.CENTER));
-
-                document.Add(new Paragraph(" "));
-
-                // Tabelle für oberen Bereich erstellen
-                var table = new Table(UnitValue.CreatePercentArray(new float[] { 5, 3 })).UseAllAvailableWidth();
-
-                // Linke Zellen für Adresse
-                var addressTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
-                addressTable.AddCell(new Cell().Add(new Paragraph("Strandbetriebe August Heim * Am Strande 25 * 23730 Neustadt").SetFont(regularFont).SetFontSize(7)).SetBorder(Border.NO_BORDER));
-                addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Anrede).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Vorname} {rechnung.Nachname}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Straße).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.PLZ} {rechnung.Ort}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                table.AddCell(new Cell().Add(addressTable).SetBorder(Border.NO_BORDER));
-
-                // Rechte Zellen für Details
-                var detailsTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
-                detailsTable.AddCell(new Cell().Add(new Paragraph("Am Strande 25").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph("23730 Neustadt").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph("Tel.: 04561/2017").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph("St.-Nr.: 2504700595").SetFont(regularFont).SetFontSize(10)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph(" ").SetFont(regularFont).SetFontSize(20)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                detailsTable.AddCell(new Cell().Add(new Paragraph($"Neustadt, den {DateTime.Now:dd.MM.yyyy}").SetFont(regularFont).SetFontSize(11)).SetTextAlignment(TextAlignment.LEFT).SetBorder(Border.NO_BORDER));
-                table.AddCell(new Cell().Add(detailsTable).SetBorder(Border.NO_BORDER));
-
-                document.Add(table);
-
-                document.Add(new Paragraph(" "));
-                if (rechnung.Art == "Strom")
-                {
-                    // Überschrift für Rechnungsdetails
-                    document.Add(new Paragraph($"Stromverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(50)
-                        .SetFont(boldFont)
-                        .SetFontSize(12)
-                        .SetTextAlignment(TextAlignment.LEFT).SetMarginBottom(10));
-                }
-                else
-                {
-                    // Überschrift für Rechnungsdetails
-                    document.Add(new Paragraph($"Wasserverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(50)
-                        .SetFont(boldFont)
-                        .SetFontSize(12)
-                        .SetTextAlignment(TextAlignment.LEFT).SetMarginBottom(10));
-                }
-                
-                // Rechnungsdetails Tabelle erstellen
-                var detailsContentTable = new Table(UnitValue.CreatePercentArray(new float[] { 2, 6 })).UseAllAvailableWidth();
-                if (rechnung.Art == "Strom")
-                {
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph("Strom alt:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Alt:0.00} kWh").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph("Strom neu:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Neu:0.00} kWh").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell(1, 2).Add(new Paragraph("______________________________________________________________").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph("Verbrauch:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Verbrauch:0.00} kWh x {rechnung.Faktor:0.00} €").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                }
-                else
-                {
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph("Wasser alt:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Alt:0.00} cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph("Wasser neu:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Neu:0.00} cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell(1, 2).Add(new Paragraph("______________________________________________________________").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph("Verbrauch:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                    detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Verbrauch:0.00} cbm x {rechnung.Faktor:0.00} €").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                }
-                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Summe:").SetFont(boldFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Betrag:0.00} €").SetFont(boldFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-
-                document.Add(detailsContentTable);
-
-                document.Add(new Paragraph(" "));
-
-                // Zahlungsdetails
-                document.Add(new Paragraph("– Rechnungsbetrag wird eingezogen –").SetMarginTop(50)
-                    .SetFont(regularFont)
-                    .SetFontSize(11)
-                    .SetTextAlignment(TextAlignment.CENTER).SetMarginBottom(5));
-
-                document.Add(new Paragraph("Kto.-Verb.: VR OH Nord eG, IBAN: DE19 2139 0008  0000 0012 01")
-                    .SetFont(regularFont)
-                    .SetFontSize(10)
-                    .SetTextAlignment(TextAlignment.CENTER).SetMarginBottom(2));
-                document.Add(new Paragraph("BIC: GENODEF1NSH")
-                    .SetFont(regularFont)
-                    .SetFontSize(10)
-                    .SetTextAlignment(TextAlignment.CENTER));
-
-                document.Close();
+                    .SetTextAlignment(TextAlignment.LEFT).SetMarginBottom(10));
             }
+            else
+            {
+                // Überschrift für Rechnungsdetails
+                document.Add(new Paragraph($"Wasserverbrauch in der Zeit vom 01.04.{rechnung.Jahr} bis 30.09.{rechnung.Jahr}").SetMarginTop(50)
+                    .SetFont(boldFont)
+                    .SetFontSize(12)
+                    .SetTextAlignment(TextAlignment.LEFT).SetMarginBottom(10));
+            }
+                
+            // Rechnungsdetails Tabelle erstellen
+            var detailsContentTable = new Table(UnitValue.CreatePercentArray(new float[] { 2, 6 })).UseAllAvailableWidth();
+            if (rechnung.Art == "Strom")
+            {
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Strom alt:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Alt:0.00} kWh").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Strom neu:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Neu:0.00} kWh").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell(1, 2).Add(new Paragraph("______________________________________________________________").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Verbrauch:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Verbrauch:0.00} kWh x {rechnung.Faktor:0.00} €").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            }
+            else
+            {
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Wasser alt:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Alt:0.00} cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Wasser neu:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Neu:0.00} cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell(1, 2).Add(new Paragraph("______________________________________________________________").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph("Verbrauch:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Verbrauch:0.00} cbm x {rechnung.Faktor:0.00} €").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            }
+            detailsContentTable.AddCell(new Cell().Add(new Paragraph("Summe:").SetFont(boldFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Betrag:0.00} €").SetFont(boldFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+
+            document.Add(detailsContentTable);
+
+            document.Add(new Paragraph(" "));
+
+            // Zahlungsdetails
+            document.Add(new Paragraph("– Rechnungsbetrag wird eingezogen –").SetMarginTop(50)
+                .SetFont(regularFont)
+                .SetFontSize(11)
+                .SetTextAlignment(TextAlignment.CENTER).SetMarginBottom(5));
+
+            document.Add(new Paragraph("Kto.-Verb.: VR OH Nord eG, IBAN: DE19 2139 0008  0000 0012 01")
+                .SetFont(regularFont)
+                .SetFontSize(10)
+                .SetTextAlignment(TextAlignment.CENTER).SetMarginBottom(2));
+            document.Add(new Paragraph("BIC: GENODEF1NSH")
+                .SetFont(regularFont)
+                .SetFontSize(10)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            document.Close();
 
             return tempPath;
         }
 
-        public static void OpenPdf(string filePath)
+        public static async Task OpenPdfAsync(string filePath, TopLevel? topLevel)
         {
-            // Öffne die PDF mit dem Standardprogramm
-            var process = new System.Diagnostics.Process
+            try
             {
-                StartInfo = new System.Diagnostics.ProcessStartInfo(filePath)
+                if (!File.Exists(filePath))
                 {
-                    UseShellExecute = true
+                    Console.WriteLine($"Datei nicht gefunden: {filePath}");
+                    return;
                 }
-            };
-            process.Start();
+
+                // Datei mit dem Launcher des TopLevel öffnen
+                var success = await topLevel.Launcher.LaunchUriAsync(new Uri(filePath));
+                Console.WriteLine($"LaunchFileAsync: {success}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fehler beim Öffnen der PDF: {ex.Message}");
+            }
         }
     }
 }

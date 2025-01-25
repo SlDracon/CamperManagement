@@ -2,21 +2,47 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:viewModels="clr-namespace:CamperManagement.ViewModels"
              xmlns:views="clr-namespace:CamperManagement.Views"
+             xmlns:models="clr-namespace:CamperManagement.Models"
              x:Class="CamperManagement.App"
              RequestedThemeVariant="Light">
     <Application.Styles>
         <FluentTheme  />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
     </Application.Styles>
-
     <Application.DataTemplates>
         <!-- DataTemplate für MainViewModel -->
         <DataTemplate DataType="{x:Type viewModels:MainViewModel}">
             <views:MainView />
         </DataTemplate>
+      <!-- TabViewModel -->
+        <DataTemplate DataType="{x:Type viewModels:TabViewModel}">
+            <TabControl>
+                <TabItem Header="Camper">
+                    <ContentControl Content="{Binding CamperView}" />
+                </TabItem>
+                <TabItem Header="Rechnungen">
+                    <ContentControl Content="{Binding RechnungenView}" />
+                </TabItem>
+            </TabControl>
+        </DataTemplate>
         <!-- CamperViewModel -> CamperView -->
-        <DataTemplate DataType="{x:Type viewModels:CamperViewModel}">
-            <views:CamperView />
+      <DataTemplate DataType="{x:Type viewModels:CamperViewModel}">
+        <views:CamperView />
+      </DataTemplate>
+      <DataTemplate DataType="{x:Type viewModels:AddCamperViewModel}">
+        <views:AddCamperView />
+      </DataTemplate>
+      <DataTemplate DataType="{x:Type viewModels:PrintSelectionViewModel}">
+        <views:PrintSelectionView />
+      </DataTemplate>
+      <DataTemplate DataType="{x:Type viewModels:EditCamperViewModel}">
+        <views:EditCamperView />
+      </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:AddRechnungViewModel}">
+            <views:AddRechnungView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:EditRechnungViewModel}">
+            <views:EditRechnungView />
         </DataTemplate>
         <!-- RechnungenViewModel -> RechnungenView -->
         <DataTemplate DataType="{x:Type viewModels:RechnungenViewModel}">

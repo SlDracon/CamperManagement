@@ -14,36 +14,38 @@ namespace CamperManagement.ViewModels
 {
     public partial class EditCamperViewModel : ObservableObject
     {
+        private readonly MainViewModel _mainViewModel;
         private readonly DatabaseService _dbService;
 
         public ObservableCollection<string> Anreden { get; } = new() { "Frau", "Herr", "Eheleute" };
 
         [ObservableProperty]
-        private string platznr;
+        private string? platznr;
 
         [ObservableProperty]
-        private string selectedAnrede;
+        private string? selectedAnrede;
 
         [ObservableProperty]
-        private string vorname;
+        private string? vorname;
 
         [ObservableProperty]
-        private string nachname;
+        private string? nachname;
 
         [ObservableProperty]
-        private string straße;
+        private string? straße;
 
         [ObservableProperty]
-        private string plz;
+        private string? plz;
 
         [ObservableProperty]
-        private string ort;
+        private string? ort;
 
         [ObservableProperty]
         private decimal vertragskosten;
 
-        public EditCamperViewModel(DatabaseService dbService, CamperDisplayModel camper)
+        public EditCamperViewModel(MainViewModel mainViewModel, DatabaseService dbService, CamperDisplayModel camper)
         {
+            _mainViewModel = mainViewModel;
             _dbService = dbService;
 
             Platznr = camper.Platznr;
@@ -56,9 +58,12 @@ namespace CamperManagement.ViewModels
             Vertragskosten = camper.Vertragskosten;
 
             SaveCommand = new AsyncRelayCommand(SaveCamperAsync);
+            CancelCommand = new AsyncRelayCommand(Cancel);
         }
 
         public IAsyncRelayCommand SaveCommand { get; }
+        public IAsyncRelayCommand CancelCommand { get; }
+        public Action? OnCamperChanged { get; set; }
 
         private async Task SaveCamperAsync()
         {
@@ -74,9 +79,20 @@ namespace CamperManagement.ViewModels
                 Vertragskosten = Vertragskosten
             });
 
-            CloseAction?.Invoke();
+            OnCamperChanged?.Invoke();
+            await Cancel();
         }
 
-        public Action? CloseAction { get; set; }
+        private Task Cancel()
+        {
+            // Rufe NavigateBackCommand aus MainViewModel auf
+            if (_mainViewModel.CanNavigateBack)
+            {
+                _mainViewModel.NavigateBackCommand.Execute(null);
+            }
+
+            return Task.CompletedTask;
+        }
     }
+
 }

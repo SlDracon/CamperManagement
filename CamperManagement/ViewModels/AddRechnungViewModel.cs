@@ -13,6 +13,7 @@ namespace CamperManagement.ViewModels
 {
     public partial class AddRechnungViewModel : ObservableObject
     {
+        private readonly MainViewModel _mainViewModel;
         private readonly DatabaseService _dbService;
 
         public ObservableCollection<string> Arten { get; } = new() { "Strom", "Wasser" };
@@ -22,7 +23,7 @@ namespace CamperManagement.ViewModels
         private string selectedArt;
 
         [ObservableProperty]
-        private string selectedPlatznummer;
+        private string? selectedPlatznummer;
 
         [ObservableProperty]
         private decimal alt;
@@ -42,11 +43,12 @@ namespace CamperManagement.ViewModels
         [ObservableProperty]
         private int jahr = DateTime.Now.Year;
 
-        public AddRechnungViewModel(DatabaseService dbService)
+        public AddRechnungViewModel(MainViewModel mainViewModel, DatabaseService dbService)
         {
+            _mainViewModel = mainViewModel;
             _dbService = dbService;
             SelectedArt = "Strom"; // Setzt "Strom" als Standardwert
-            LoadPlatznummernAsync();
+            _ = LoadPlatznummernAsync();
 
             // Event für Änderungen an Art oder Platznummer
             PropertyChanged += async (_, e) =>
@@ -77,14 +79,13 @@ namespace CamperManagement.ViewModels
 
             SaveCommand = new AsyncRelayCommand(SaveAsync);
             SaveAndCloseCommand = new AsyncRelayCommand(SaveAndCloseAsync);
-            CancelCommand = new RelayCommand(() => CloseAction?.Invoke());
+            CancelCommand = new AsyncRelayCommand(Cancel);
         }
 
         public IAsyncRelayCommand SaveCommand { get; }
         public IAsyncRelayCommand SaveAndCloseCommand { get; }
-        public RelayCommand CancelCommand { get; }
+        public IAsyncRelayCommand CancelCommand { get; }
 
-        public Action? CloseAction { get; set; }
         public Action? SetFocusToNeuTextBox { get; set; }
         public Action? OnRechnungAdded { get; set; }
 
@@ -130,8 +131,10 @@ namespace CamperManagement.ViewModels
 
             // Eingaben leeren
             Neu = 0;
-            SelectedPlatznummer = Platznummern[(Platznummern.IndexOf(SelectedPlatznummer) + 1) % Platznummern.Count];
-            
+            if (SelectedPlatznummer != null)
+                SelectedPlatznummer =
+                    Platznummern[(Platznummern.IndexOf(SelectedPlatznummer) + 1) % Platznummern.Count];
+
             // Fokus auf Neu setzen
             SetFocusToNeuTextBox?.Invoke();
         }
@@ -139,7 +142,18 @@ namespace CamperManagement.ViewModels
         private async Task SaveAndCloseAsync()
         {
             await SaveAsync();
-            CloseAction?.Invoke();
+            await Cancel();
+        }
+
+        private Task Cancel()
+        {
+            // Rufe NavigateBackCommand aus MainViewModel auf
+            if (_mainViewModel.CanNavigateBack)
+            {
+                _mainViewModel.NavigateBackCommand.Execute(null);
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

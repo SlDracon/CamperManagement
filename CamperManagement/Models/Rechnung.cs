@@ -16,7 +16,7 @@ namespace CamperManagement.Models
         public decimal Faktor { get; set; }
         public decimal Betrag { get; set; }
         public int Jahr { get; set; }
-        public string Type { get; set; }
+        public string? Type { get; set; }
         public DateTime Created { get; set; }
         public DateTime Updated { get; set; }
         public bool Printed { get; set; }

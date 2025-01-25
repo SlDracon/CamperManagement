@@ -1,15 +1,14 @@
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using CamperManagement.Models;
-using CamperManagement.Services;
 using CamperManagement.ViewModels;
 
-namespace CamperManagement.Views;
-
-public partial class MainView : UserControl
+namespace CamperManagement.Views
 {
-    public MainView()
+    public partial class MainView : UserControl
     {
-        InitializeComponent();
+        public MainView()
+        {
+            InitializeComponent();
+            DataContext = new MainViewModel();
+        }
     }
 }

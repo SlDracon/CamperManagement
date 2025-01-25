@@ -14,45 +14,47 @@ namespace CamperManagement.ViewModels
 {
     public partial class AddCamperViewModel : ObservableObject
     {
+        private readonly MainViewModel _mainViewModel;
         private readonly DatabaseService _dbService;
 
         public ObservableCollection<string> Platznummern { get; } = new();
         public ObservableCollection<string> Anreden { get; } = new() { "Frau", "Herr", "Eheleute" };
 
-        public Action? CloseAction { get; set; }
+        [ObservableProperty]
+        private string? selectedPlatznummer;
 
         [ObservableProperty]
-        private string selectedPlatznummer;
+        private string? selectedAnrede;
 
         [ObservableProperty]
-        private string selectedAnrede;
+        private string? vorname;
 
         [ObservableProperty]
-        private string vorname;
+        private string? nachname;
 
         [ObservableProperty]
-        private string nachname;
+        private string? straße;
 
         [ObservableProperty]
-        private string straße;
+        private string? plz;
 
         [ObservableProperty]
-        private string plz;
-
-        [ObservableProperty]
-        private string ort;
+        private string? ort;
 
         [ObservableProperty]
         private decimal vertragskosten;
 
-        public AddCamperViewModel(DatabaseService dbService)
+        public AddCamperViewModel(MainViewModel mainViewModel, DatabaseService dbService)
         {
+            _mainViewModel = mainViewModel;
             _dbService = dbService;
-            LoadPlatznummern();
+            _ = LoadPlatznummern();
             SaveCommand = new AsyncRelayCommand(SaveCamperAsync);
+            CancelCommand = new AsyncRelayCommand(Cancel);
         }
 
         public IAsyncRelayCommand SaveCommand { get; }
+        public IAsyncRelayCommand CancelCommand { get; }
 
         private async Task LoadPlatznummern()
         {
@@ -83,7 +85,18 @@ namespace CamperManagement.ViewModels
             });
 
             // Fenster schließen
-            CloseAction?.Invoke();
+            await Cancel();
+        }
+
+        private Task Cancel()
+        {
+            // Rufe NavigateBackCommand aus MainViewModel auf
+            if (_mainViewModel.CanNavigateBack)
+            {
+                _mainViewModel.NavigateBackCommand.Execute(null);
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

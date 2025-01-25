@@ -3,7 +3,6 @@ using CamperManagement.Models;
 using MySqlConnector;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Data;
 
 namespace CamperManagement.Services
 {
@@ -16,10 +15,10 @@ namespace CamperManagement.Services
         {
             var campers = new List<CamperDisplayModel>();
 
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
             SELECT 
                 p.platznr, 
                 pers.anrede, 
@@ -36,8 +35,8 @@ namespace CamperManagement.Services
             WHERE c.deactivated = '0000-00-00 00:00:00'
             ORDER BY p.platznr ASC";
 
-            using var command = new MySqlCommand(query, connection);
-            using var reader = await command.ExecuteReaderAsync();
+            await using var command = new MySqlCommand(query, connection);
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -61,7 +60,7 @@ namespace CamperManagement.Services
         {
             var rechnungen = new List<RechnungDisplayModel>();
 
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
             string query = @"
@@ -90,8 +89,8 @@ namespace CamperManagement.Services
         WHERE c.active = 1
         ORDER BY r.id DESC";
 
-            using var command = new MySqlCommand(query, connection);
-            using var reader = await command.ExecuteReaderAsync();
+            await using var command = new MySqlCommand(query, connection);
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -123,13 +122,13 @@ namespace CamperManagement.Services
         {
             var platznummern = new List<string>();
 
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
             string query = "SELECT platznr FROM plaetze ORDER BY platznr ASC";
 
-            using var command = new MySqlCommand(query, connection);
-            using var reader = await command.ExecuteReaderAsync();
+            await using var command = new MySqlCommand(query, connection);
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -139,9 +138,9 @@ namespace CamperManagement.Services
             return platznummern;
         }
 
-        public async Task DeactivateOldCamperAsync(string platznummer)
+        public async Task DeactivateOldCamperAsync(string? platznummer)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
             string query = @"
@@ -150,7 +149,7 @@ namespace CamperManagement.Services
         SET c.deactivated = @Deactivated, c.active = 0
         WHERE p.platznr = @Platznr AND c.deactivated = '0000-00-00 00:00:00'";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@Deactivated", DateTime.Now);
             command.Parameters.AddWithValue("@Platznr", platznummer);
 
@@ -159,10 +158,10 @@ namespace CamperManagement.Services
 
         public async Task AddNewCamperAsync(CamperDisplayModel camper)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            using var transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
 
             try
             {
@@ -171,7 +170,7 @@ namespace CamperManagement.Services
             INSERT INTO personen (vorname, nachname, anrede, strasse, plz, ort, created, updated)
             VALUES (@Vorname, @Nachname, @Anrede, @Straße, @PLZ, @Ort, @Created, @Updated);";
 
-                using var insertPersonCommand = new MySqlCommand(insertPersonQuery, connection, transaction);
+                await using var insertPersonCommand = new MySqlCommand(insertPersonQuery, connection, transaction);
                 insertPersonCommand.Parameters.AddWithValue("@Vorname", camper.Vorname);
                 insertPersonCommand.Parameters.AddWithValue("@Nachname", camper.Nachname);
                 insertPersonCommand.Parameters.AddWithValue("@Anrede", camper.Anrede);
@@ -184,10 +183,10 @@ namespace CamperManagement.Services
                 await insertPersonCommand.ExecuteNonQueryAsync();
 
                 // Hole die neue Personen-ID
-                long newPersonId = insertPersonCommand.LastInsertedId;
+                var newPersonId = insertPersonCommand.LastInsertedId;
 
                 // Füge den Camper in die Tabelle `camper` ein
-                string insertCamperQuery = @"
+                var insertCamperQuery = @"
             INSERT INTO camper (platz_id, active, created, updated, Vertragskosten)
             VALUES (
                 (SELECT id FROM plaetze WHERE platznr = @Platznr),
@@ -197,7 +196,7 @@ namespace CamperManagement.Services
                 @Vertragskosten
             );";
 
-                using var insertCamperCommand = new MySqlCommand(insertCamperQuery, connection, transaction);
+                await using var insertCamperCommand = new MySqlCommand(insertCamperQuery, connection, transaction);
                 insertCamperCommand.Parameters.AddWithValue("@Platznr", camper.Platznr);
                 insertCamperCommand.Parameters.AddWithValue("@Active", 1);
                 insertCamperCommand.Parameters.AddWithValue("@Created", DateTime.Now);
@@ -207,17 +206,17 @@ namespace CamperManagement.Services
                 await insertCamperCommand.ExecuteNonQueryAsync();
 
                 // Hole die neue Camper-ID
-                long newCamperId = insertCamperCommand.LastInsertedId;
+                var newCamperId = insertCamperCommand.LastInsertedId;
 
                 // Aktualisiere den Eintrag in der Tabelle `camper_personen`
-                string updateCamperPersonQuery = @"
+                var updateCamperPersonQuery = @"
             UPDATE camper_personen
             SET camper_id = @NewCamperId, personen_id = @NewPersonId, rechnungsadresse = 1
             WHERE camper_id IN (
                 SELECT id FROM camper WHERE platz_id = (SELECT id FROM plaetze WHERE platznr = @Platznr)
             );";
 
-                using var updateCamperPersonCommand =
+                await using var updateCamperPersonCommand =
                     new MySqlCommand(updateCamperPersonQuery, connection, transaction);
                 updateCamperPersonCommand.Parameters.AddWithValue("@NewCamperId", newCamperId);
                 updateCamperPersonCommand.Parameters.AddWithValue("@NewPersonId", newPersonId);
@@ -237,10 +236,10 @@ namespace CamperManagement.Services
 
         public async Task UpdateCamperAsync(CamperDisplayModel camper)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         UPDATE camper c
         JOIN plaetze p ON c.platz_id = p.id
         JOIN camper_personen cp ON c.id = cp.camper_id
@@ -255,7 +254,7 @@ namespace CamperManagement.Services
             c.updated = @Updated
         WHERE p.platznr = @Platznr;";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@Platznr", camper.Platznr);
             command.Parameters.AddWithValue("@Anrede", camper.Anrede);
             command.Parameters.AddWithValue("@Vorname", camper.Vorname);
@@ -271,14 +270,14 @@ namespace CamperManagement.Services
 
         public async Task<List<int>> GetAvailableJahreAsync()
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = "SELECT DISTINCT jahr FROM rechnungen ORDER BY jahr DESC";
+            var query = "SELECT DISTINCT jahr FROM rechnungen ORDER BY jahr DESC";
 
             var jahre = new List<int>();
-            using var command = new MySqlCommand(query, connection);
-            using var reader = await command.ExecuteReaderAsync();
+            await using var command = new MySqlCommand(query, connection);
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -292,10 +291,10 @@ namespace CamperManagement.Services
         {
             var kostenEintraege = new List<KostenEintrag>();
 
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         SELECT 
             p.platznr,
             pers.vorname,
@@ -314,10 +313,10 @@ namespace CamperManagement.Services
         GROUP BY p.platznr, pers.vorname, pers.nachname
         ORDER BY p.platznr;";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@Jahr", jahr);
 
-            using var reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 kostenEintraege.Add(new KostenEintrag
@@ -336,15 +335,15 @@ namespace CamperManagement.Services
 
         public async Task MarkRechnungAsPrintedAsync(int rechnungId)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         UPDATE rechnungen
         SET printed = 1
         WHERE id = @RechnungId";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@RechnungId", rechnungId);
 
             await command.ExecuteNonQueryAsync();
@@ -352,14 +351,14 @@ namespace CamperManagement.Services
 
         public async Task AddRechnungAsync(Rechnung rechnung)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         INSERT INTO rechnungen (platz_id, alt, neu, verbrauch, faktor, betrag, jahr, type, created)
         VALUES (@PlatzId, @Alt, @Neu, @Verbrauch, @Faktor, @Betrag, @Jahr, @Type, @Created);";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@PlatzId", rechnung.PlatzId);
             command.Parameters.AddWithValue("@Alt", rechnung.Alt);
@@ -374,14 +373,14 @@ namespace CamperManagement.Services
             await command.ExecuteNonQueryAsync();
         }
 
-        public async Task<int> GetPlatzIdByPlatznummerAsync(string platznummer)
+        public async Task<int> GetPlatzIdByPlatznummerAsync(string? platznummer)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = "SELECT id FROM plaetze WHERE platznr = @Platznummer LIMIT 1;";
+            var query = "SELECT id FROM plaetze WHERE platznr = @Platznummer LIMIT 1;";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@Platznummer", platznummer);
 
             var result = await command.ExecuteScalarAsync();
@@ -394,12 +393,12 @@ namespace CamperManagement.Services
             return Convert.ToInt32(result);
         }
 
-        public async Task<decimal> GetNeuFromLatestRechnungAsync(string platznummer, string art)
+        public async Task<decimal> GetNeuFromLatestRechnungAsync(string? platznummer, string art)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         SELECT r.neu
         FROM rechnungen r
         JOIN plaetze p ON r.platz_id = p.id
@@ -407,7 +406,7 @@ namespace CamperManagement.Services
         ORDER BY r.created DESC
         LIMIT 1;";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@Platznummer", platznummer);
             command.Parameters.AddWithValue("@Art", art);
 
@@ -425,10 +424,10 @@ namespace CamperManagement.Services
         {
             var ableseEintraege = new List<AbleseEintrag>();
 
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         SELECT 
             p.platznr,
             pers.vorname,
@@ -444,8 +443,8 @@ namespace CamperManagement.Services
         GROUP BY p.platznr, pers.vorname, pers.nachname
         ORDER BY p.platznr;";
 
-            using var command = new MySqlCommand(query, connection);
-            using var reader = await command.ExecuteReaderAsync();
+            await using var command = new MySqlCommand(query, connection);
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -464,10 +463,10 @@ namespace CamperManagement.Services
 
         public async Task UpdateRechnungAsync(Rechnung rechnung)
         {
-            using var connection = new MySqlConnection(ConnectionString);
+            await using var connection = new MySqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            string query = @"
+            var query = @"
         UPDATE rechnungen
         SET neu = @Neu, 
             verbrauch = @Verbrauch, 
@@ -476,7 +475,7 @@ namespace CamperManagement.Services
             updated = NOW()
         WHERE id = @Id";
 
-            using var command = new MySqlCommand(query, connection);
+            await using var command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@Neu", rechnung.Neu);
             command.Parameters.AddWithValue("@Verbrauch", rechnung.Verbrauch);
             command.Parameters.AddWithValue("@Faktor", rechnung.Faktor);

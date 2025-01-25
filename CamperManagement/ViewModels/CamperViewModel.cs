@@ -9,12 +9,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using CamperManagement.Views;
+using Avalonia.Controls;
 
 namespace CamperManagement.ViewModels
 {
     public partial class CamperViewModel : ViewModelBase
     {
+        private readonly MainViewModel _mainViewModel;
         private readonly DatabaseService _dbService;
+        private TopLevel? _toplevel;
 
         [ObservableProperty]
         private ObservableCollection<CamperDisplayModel> camperList = new();
@@ -25,13 +28,15 @@ namespace CamperManagement.ViewModels
         [ObservableProperty]
         private string camperSearchQuery = string.Empty;
 
-        public CamperViewModel()
+        public CamperViewModel(MainViewModel mainViewModel)
         {
+            _mainViewModel = mainViewModel;
             _dbService = new DatabaseService();
 
-            AddCamperCommand = new RelayCommand(OpenAddCamperDialog);
+            AddCamperCommand = new AsyncRelayCommand(OpenAddCamperDialog);
             PrintCommand = new RelayCommand(OpenPrintDialog);
             PrintAblesetabelleCommand = new AsyncRelayCommand(PrintAblesetabelleAsync);
+            EditCamperCommand = new RelayCommand<CamperDisplayModel>(OpenEditCamperDialog!);
 
             // Initialisiere die gefilterte Liste
             FilteredCamperList = new ObservableCollection<CamperDisplayModel>();
@@ -40,9 +45,10 @@ namespace CamperManagement.ViewModels
             _ = LoadDataAsync();
         }
 
-        public IRelayCommand AddCamperCommand { get; }
+        public IAsyncRelayCommand AddCamperCommand { get; }
         public IRelayCommand PrintCommand { get; }
         public IRelayCommand PrintAblesetabelleCommand { get; }
+        public IRelayCommand<CamperDisplayModel> EditCamperCommand { get; }
 
         public async Task LoadDataAsync()
         {
@@ -57,12 +63,9 @@ namespace CamperManagement.ViewModels
             FilterCamperList();
         }
 
-        private async void OpenAddCamperDialog()
+        private async Task OpenAddCamperDialog()
         {
-            var viewModel = new AddCamperViewModel(new DatabaseService());
-            var addCamperWindow = new AddCamperWindow(viewModel);
-
-            await addCamperWindow.ShowDialog(Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+            _mainViewModel.NavigateToCommand.Execute(new AddCamperViewModel(_mainViewModel, new DatabaseService()));
 
             // Aktualisiere die Camperliste nach dem Speichern
             await LoadDataAsync();
@@ -85,13 +88,13 @@ namespace CamperManagement.ViewModels
 
                 var filtered = CamperList.Where(camper =>
                     searchTerms.All(term =>
-                        camper.Platznr.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        camper.Anrede.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        camper.Vorname.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        camper.Nachname.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        camper.Straße.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        camper.PLZ.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        camper.Ort.Contains(term, StringComparison.OrdinalIgnoreCase)
+                        camper is { Platznr: not null, Anrede: not null, Vorname: not null, Nachname: not null, Straße: not null, PLZ: not null, Ort: not null } && (camper.Platznr.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            camper.Anrede.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            camper.Vorname.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            camper.Nachname.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            camper.Straße.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            camper.PLZ.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            camper.Ort.Contains(term, StringComparison.OrdinalIgnoreCase))
                     )
                 );
 
@@ -138,12 +141,9 @@ namespace CamperManagement.ViewModels
             return terms;
         }
 
-        private async void OpenPrintDialog()
+        private void OpenPrintDialog()
         {
-            var printSelectionViewModel = new PrintSelectionViewModel(new DatabaseService());
-            var printWindow = new PrintSelectionWindow(printSelectionViewModel);
-
-            await printWindow.ShowDialog(Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+            _mainViewModel.NavigateToCommand.Execute(new PrintSelectionViewModel(_mainViewModel, new DatabaseService()));
         }
 
         private async Task PrintAblesetabelleAsync()
@@ -155,8 +155,46 @@ namespace CamperManagement.ViewModels
                 return;
             }
 
-            var pdfPath = await PdfService.GenerateAbleseTabellePdfAsync(ableseEintraege);
-            PdfService.OpenPdf(pdfPath);
+            switch (Avalonia.Application.Current?.ApplicationLifetime)
+            {
+                case IClassicDesktopStyleApplicationLifetime desktop:
+                    // Desktop: Hauptfenster verwenden
+                    _toplevel = desktop.MainWindow;
+                    break;
+                case ISingleViewApplicationLifetime singleViewPlatform:
+                {
+                    // Android: Hauptansicht verwenden
+                    var mainView = singleViewPlatform.MainView;
+
+                    if (mainView != null)
+                    {
+                        // TopLevel aus der Hauptansicht extrahieren
+                        _toplevel = TopLevel.GetTopLevel(mainView);
+                    }
+                    else
+                    {
+                        Console.WriteLine("MainView konnte nicht gefunden werden.");
+                    }
+
+                    break;
+                }
+                default:
+                    Console.WriteLine("Unbekannte Plattform oder ApplicationLifetime.");
+                    break;
+            }
+
+            var pdfPath = await PdfService.GenerateAbleseTabellePdfAsync(_toplevel, ableseEintraege);
+            await PdfService.OpenPdfAsync(pdfPath, _toplevel);
+        }
+
+        private void OpenEditCamperDialog(CamperDisplayModel camper)
+        {
+            if (camper == null) return;
+
+            _mainViewModel.NavigateToCommand.Execute(new EditCamperViewModel(_mainViewModel, new DatabaseService(), camper)
+            {
+                OnCamperChanged = () => { _ = LoadDataAsync(); }
+            });
         }
     }
 }

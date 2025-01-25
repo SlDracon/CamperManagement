@@ -6,11 +6,6 @@
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="450"
              x:Class="CamperManagement.Views.CamperView"
              x:DataType="vm:CamperViewModel">
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-      <vm:CamperViewModel />
-    </Design.DataContext>
     <StackPanel>
         <!-- Buttons oben -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,0,10">

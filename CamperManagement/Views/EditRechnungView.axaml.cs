@@ -5,22 +5,15 @@ using CamperManagement.ViewModels;
 
 namespace CamperManagement.Views;
 
-public partial class AddCamperWindow : Window
+public partial class EditRechnungView : UserControl
 {
-    public AddCamperWindow(AddCamperViewModel viewModel)
+    public EditRechnungView()
     {
         InitializeComponent();
-
-        DataContext = viewModel;
-
-        if (DataContext is AddCamperViewModel vm)
-        {
-            vm.CloseAction = Close;
-        }
     }
 
     private void OnCancelButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        Close(); // Schlieﬂt das Fenster
+        //Close();
     }
 }

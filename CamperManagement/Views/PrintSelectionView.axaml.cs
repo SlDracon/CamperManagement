@@ -5,18 +5,17 @@ using CamperManagement.ViewModels;
 
 namespace CamperManagement.Views;
 
-public partial class PrintSelectionWindow : Window
+public partial class PrintSelectionView : UserControl
 {
-    public PrintSelectionWindow(PrintSelectionViewModel viewModel)
+    public PrintSelectionView()
     {
         InitializeComponent();
-        DataContext = viewModel;
 
-        viewModel.CloseAction = Close; // Verknüpfe die CloseAction mit der Close-Methode des Fensters
+        //viewModel.CloseAction = Close; // VerknÃ¼pfe die CloseAction mit der Close-Methode des Fensters
     }
 
     private void OnCancelButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        Close();
+        //Close();
     }
 }
