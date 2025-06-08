@@ -18,6 +18,7 @@ using Path = System.IO.Path;
 using Avalonia.Controls;
 using Border = iText.Layout.Borders.Border;
 using Avalonia.Platform.Storage;
+using iText.Kernel.Colors;
 using Microsoft.Extensions.Logging;
 
 namespace CamperManagement.Services
@@ -47,48 +48,84 @@ namespace CamperManagement.Services
             await using var stream = await result.OpenWriteAsync();
             await using var writer = new PdfWriter(stream);
             using var pdf = new PdfDocument(writer);
-            var document = new Document(pdf);
+            var document = new Document(pdf, PageSize.A4);
+            document.SetMargins(36, 36, 36, 36);  // 36 Punkte = ca. 1,27 cm
 
             // Schriftarten
             var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
             var regularFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
 
-            // Titel
-            var title = new Paragraph($"Kosten für das Jahr {jahr}")
+            // Titel mit mehr Abstand
+            var title = new Paragraph($"Kostenübersicht {jahr}")
                 .SetFont(boldFont)
-                .SetFontSize(18)
-                .SetTextAlignment(TextAlignment.CENTER);
+                .SetFontSize(20)
+                .SetTextAlignment(TextAlignment.CENTER)
+                .SetMarginBottom(20);
             document.Add(title);
 
-            // Leerer Abstand
-            document.Add(new Paragraph(" "));
+            // Tabelle mit verbessertem Layout
+            var columnWidths = new float[] { 1, 2, 2, 1.5f, 1.5f, 1.5f, 1.5f };
+            var table = new Table(UnitValue.CreatePercentArray(columnWidths))
+                .UseAllAvailableWidth()
+                .SetBorder(new SolidBorder(0.5f));
 
-            // Tabelle erstellen
-            var table = new Table([2, 3, 3, 2, 2, 2, 1])
-                .SetWidth(UnitValue.CreatePercentValue(100));
+            // Kopfzeilen mit verbessertem Styling
+            string[] headers = { "PlatzNr", "Vorname", "Nachname", "Wasser", "Strom", "Gesamt", "Vertrag" };
+            foreach (var header in headers)
+            {
+                table.AddHeaderCell(
+                    new Cell()
+                        .SetBackgroundColor(new DeviceRgb(240, 240, 240))
+                        .SetPadding(5)
+                        .Add(new Paragraph(header)
+                            .SetFont(boldFont)
+                            .SetTextAlignment(TextAlignment.CENTER)));
+            }
 
-            // Kopfzeile hinzufügen
-            table.AddHeaderCell(new Cell().Add(new Paragraph("PlatzNr").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Vorname").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Nachname").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Wasser-betrag").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Strom-betrag").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Gesamt-betrag").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-            table.AddHeaderCell(new Cell().Add(new Paragraph("Vertrags-kosten").SetFont(boldFont).SetTextAlignment(TextAlignment.CENTER)));
-
-            // Zeilen hinzufügen
+            // Zeilen mit verbessertem Styling
             foreach (var eintrag in eintraege)
             {
-                table.AddCell(new Cell().Add(new Paragraph(eintrag.PlatzNr).SetFont(regularFont)));
-                table.AddCell(new Cell().Add(new Paragraph(eintrag.Vorname).SetFont(regularFont)));
-                table.AddCell(new Cell().Add(new Paragraph(eintrag.Nachname).SetFont(regularFont)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.WasserBetrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.StromBetrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.Gesamtbetrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
-                table.AddCell(new Cell().Add(new Paragraph($"{eintrag.Vertragskosten:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph(eintrag.PlatzNr).SetFont(regularFont)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph(eintrag.Vorname).SetFont(regularFont)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph(eintrag.Nachname).SetFont(regularFont)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph($"{eintrag.WasserBetrag:N2} €")
+                    .SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph($"{eintrag.StromBetrag:N2} €")
+                    .SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph($"{eintrag.Gesamtbetrag:N2} €")
+                    .SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+                table.AddCell(new Cell().SetPadding(5).Add(new Paragraph($"{eintrag.Vertragskosten:N2} €")
+                    .SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT)));
+            }
+
+            // Summenzeile hinzufügen
+            var summen = new[]
+            {
+                eintraege.Sum(e => e.WasserBetrag),
+                eintraege.Sum(e => e.StromBetrag),
+                eintraege.Sum(e => e.Gesamtbetrag),
+                eintraege.Sum(e => e.Vertragskosten)
+            };
+
+            table.AddCell(new Cell(1, 3).SetPadding(5)
+                .Add(new Paragraph("Gesamtsumme:").SetFont(boldFont)));
+            foreach (var summe in summen)
+            {
+                table.AddCell(new Cell().SetPadding(5)
+                    .SetBackgroundColor(new DeviceRgb(240, 240, 240))
+                    .Add(new Paragraph($"{summe:N2} €")
+                        .SetFont(boldFont)
+                        .SetTextAlignment(TextAlignment.RIGHT)));
             }
 
             document.Add(table);
+
+            // Fußzeile hinzufügen
+            document.Add(new Paragraph($"\nErstellt am: {DateTime.Now:dd.MM.yyyy HH:mm}")
+                .SetFont(regularFont)
+                .SetFontSize(8)
+                .SetTextAlignment(TextAlignment.RIGHT));
+
             document.Close();
 
             return pdfPath ?? string.Empty;
