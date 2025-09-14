@@ -94,7 +94,8 @@ namespace CamperManagement.ViewModels
                             camper.Nachname.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             camper.Straße.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                             camper.PLZ.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            camper.Ort.Contains(term, StringComparison.OrdinalIgnoreCase))
+                            camper.Ort.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            (camper.Email != null && camper.Email.Contains(term, StringComparison.OrdinalIgnoreCase)))
                     )
                 );
 

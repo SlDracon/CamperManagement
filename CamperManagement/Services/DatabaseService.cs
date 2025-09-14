@@ -27,6 +27,7 @@ namespace CamperManagement.Services
                 pers.strasse, 
                 pers.plz, 
                 pers.ort,
+                pers.email,
                 c.Vertragskosten
             FROM camper c
             JOIN plaetze p ON c.platz_id = p.id
@@ -49,6 +50,7 @@ namespace CamperManagement.Services
                     Straße = reader.GetString("strasse"),
                     PLZ = reader["plz"].ToString() ?? string.Empty,
                     Ort = reader.GetString("ort"),
+                    Email = reader["email"]?.ToString() ?? string.Empty,
                     Vertragskosten = reader.GetDecimal("Vertragskosten")
                 });
             }
@@ -80,7 +82,8 @@ namespace CamperManagement.Services
             pers.nachname, 
             pers.strasse, 
             pers.plz, 
-            pers.ort
+            pers.ort,
+            pers.email
         FROM rechnungen r
         JOIN plaetze p ON r.platz_id = p.id
         JOIN camper c ON c.platz_id = p.id
@@ -167,8 +170,8 @@ namespace CamperManagement.Services
             {
                 // Füge die Person in die Tabelle `personen` ein
                 string insertPersonQuery = @"
-            INSERT INTO personen (vorname, nachname, anrede, strasse, plz, ort, created, updated)
-            VALUES (@Vorname, @Nachname, @Anrede, @Straße, @PLZ, @Ort, @Created, @Updated);";
+            INSERT INTO personen (vorname, nachname, anrede, strasse, plz, ort, email, created, updated)
+            VALUES (@Vorname, @Nachname, @Anrede, @Straße, @PLZ, @Ort, @Email, @Created, @Updated);";
 
                 await using var insertPersonCommand = new MySqlCommand(insertPersonQuery, connection, transaction);
                 insertPersonCommand.Parameters.AddWithValue("@Vorname", camper.Vorname);
@@ -177,6 +180,7 @@ namespace CamperManagement.Services
                 insertPersonCommand.Parameters.AddWithValue("@Straße", camper.Straße);
                 insertPersonCommand.Parameters.AddWithValue("@PLZ", camper.PLZ);
                 insertPersonCommand.Parameters.AddWithValue("@Ort", camper.Ort);
+                insertPersonCommand.Parameters.AddWithValue("@Email", camper.Email ?? string.Empty);
                 insertPersonCommand.Parameters.AddWithValue("@Created", DateTime.Now);
                 insertPersonCommand.Parameters.AddWithValue("@Updated", DateTime.Now);
 
@@ -249,8 +253,9 @@ namespace CamperManagement.Services
             pers.nachname = @Nachname, 
             pers.strasse = @Straße, 
             pers.plz = @PLZ, 
+            pers.ort = @Ort,
+            pers.email = @Email,
             c.Vertragskosten = @Vertragskosten,
-            c.updated = @Updated,
             c.updated = @Updated
         WHERE p.platznr = @Platznr;";
 
@@ -262,6 +267,7 @@ namespace CamperManagement.Services
             command.Parameters.AddWithValue("@Straße", camper.Straße);
             command.Parameters.AddWithValue("@PLZ", camper.PLZ);
             command.Parameters.AddWithValue("@Ort", camper.Ort);
+            command.Parameters.AddWithValue("@Email", camper.Email ?? string.Empty);
             command.Parameters.AddWithValue("@Vertragskosten", camper.Vertragskosten);
             command.Parameters.AddWithValue("@Updated", DateTime.Now);
 

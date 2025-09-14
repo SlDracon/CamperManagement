@@ -42,7 +42,14 @@ namespace CamperManagement.Services
             };
 
             var result = await storageProvider.SaveFilePickerAsync(options);
-            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            
+            // Prüfe ob der Benutzer den Dialog abgebrochen hat
+            if (result == null)
+            {
+                return string.Empty;
+            }
+            
+            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -147,7 +154,14 @@ namespace CamperManagement.Services
             };
 
             var result = await storageProvider.SaveFilePickerAsync(options);
-            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            
+            // Prüfe ob der Benutzer den Dialog abgebrochen hat
+            if (result == null)
+            {
+                return string.Empty;
+            }
+            
+            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -208,7 +222,14 @@ namespace CamperManagement.Services
             };
 
             var result = await storageProvider.SaveFilePickerAsync(options);
-            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            
+            // Prüfe ob der Benutzer den Dialog abgebrochen hat
+            if (result == null)
+            {
+                return string.Empty;
+            }
+            
+            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -272,7 +293,14 @@ namespace CamperManagement.Services
             };
 
             var result = await storageProvider.SaveFilePickerAsync(options);
-            var pdfPath = result?.GetParentAsync()!.Result?.Path.AbsolutePath;
+            
+            // Prüfe ob der Benutzer den Dialog abgebrochen hat
+            if (result == null)
+            {
+                return string.Empty;
+            }
+            
+            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();

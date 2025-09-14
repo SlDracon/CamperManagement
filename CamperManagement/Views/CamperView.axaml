@@ -35,6 +35,7 @@
                 <DataGridTextColumn Header="Straße" Binding="{Binding Straße}" />
                 <DataGridTextColumn Header="PLZ" Binding="{Binding PLZ}" />
                 <DataGridTextColumn Header="Ort" Binding="{Binding Ort}" />
+                <DataGridTextColumn Header="E-Mail" Binding="{Binding Email}" />
                 <DataGridTextColumn Header="Vertragskosten" Binding="{Binding Vertragskosten}" />
             </DataGrid.Columns>
         </DataGrid>

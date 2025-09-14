@@ -41,6 +41,9 @@ namespace CamperManagement.ViewModels
         private string? ort;
 
         [ObservableProperty]
+        private string? email;
+
+        [ObservableProperty]
         private decimal vertragskosten;
 
         public EditCamperViewModel(MainViewModel mainViewModel, DatabaseService dbService, CamperDisplayModel camper)
@@ -55,6 +58,7 @@ namespace CamperManagement.ViewModels
             Straße = camper.Straße;
             Plz = camper.PLZ;
             Ort = camper.Ort;
+            Email = camper.Email;
             Vertragskosten = camper.Vertragskosten;
 
             SaveCommand = new AsyncRelayCommand(SaveCamperAsync);
@@ -76,6 +80,7 @@ namespace CamperManagement.ViewModels
                 Straße = Straße,
                 PLZ = Plz,
                 Ort = Ort,
+                Email = Email,
                 Vertragskosten = Vertragskosten
             });
 
