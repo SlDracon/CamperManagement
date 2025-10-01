@@ -10,6 +10,6 @@ namespace CamperManagement.Models
     {
         public decimal Betrag { get; set; }
         public DateTime WirksamAb { get; set; }
-        public string Kommentar { get; set; }
+        public required string Kommentar { get; set; }
     }
 }

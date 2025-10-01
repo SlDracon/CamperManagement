@@ -46,9 +46,17 @@ public partial class RechnungenViewModel : ObservableObject
             PrintRechnungAsync,
             () => SelectedRechnungen.Any()
         );
+        CreateRechnungenCommand = new AsyncRelayCommand(
+            CreateRechnungenAsync,
+            () => SelectedRechnungen.Any()
+        );
 
         // Beobachte Änderungen an der Auswahl
-        SelectedRechnungen.CollectionChanged += (_, _) => { PrintRechnungCommand.NotifyCanExecuteChanged(); };
+        SelectedRechnungen.CollectionChanged += (_, _) =>
+        {
+            PrintRechnungCommand.NotifyCanExecuteChanged();
+            CreateRechnungenCommand.NotifyCanExecuteChanged();
+        };
         PrintTabelleCommand = new AsyncRelayCommand(PrintTabelleAsync);
 
         // Initialisiere die gefilterte Liste
@@ -61,6 +69,7 @@ public partial class RechnungenViewModel : ObservableObject
     public IAsyncRelayCommand LoadDataCommand { get; }
     public IRelayCommand OpenAddRechnungCommand { get; }
     public IRelayCommand PrintRechnungCommand { get; }
+    public IRelayCommand CreateRechnungenCommand { get; }
     public IRelayCommand PrintTabelleCommand { get; }
     public IRelayCommand<RechnungDisplayModel> EditRechnungCommand { get; }
 
@@ -258,6 +267,75 @@ public partial class RechnungenViewModel : ObservableObject
         {
             StatusMessage = "Fehler beim Drucken der Rechnungen";
             Console.WriteLine(ex);
+        }
+    }
+
+    private async Task CreateRechnungenAsync()
+    {
+        if (SelectedRechnungen == null || !SelectedRechnungen.Any())
+            return;
+
+        try
+        {
+            StatusMessage = "Rechnungen werden erstellt...";
+
+            switch (Avalonia.Application.Current?.ApplicationLifetime)
+            {
+                case IClassicDesktopStyleApplicationLifetime desktop:
+                    _toplevel = desktop.MainWindow;
+                    break;
+                case ISingleViewApplicationLifetime singleViewPlatform:
+                {
+                    var mainView = singleViewPlatform.MainView;
+
+                    if (mainView != null)
+                    {
+                        _toplevel = TopLevel.GetTopLevel(mainView);
+                    }
+                    else
+                    {
+                        Console.WriteLine("MainView konnte nicht gefunden werden.");
+                    }
+
+                    break;
+                }
+                default:
+                    Console.WriteLine("Unbekannte Plattform oder ApplicationLifetime.");
+                    break;
+            }
+
+            var selectedRechnungenSnapshot = SelectedRechnungen.ToList();
+
+            var success = await PdfService.GenerateRechnungenByPlatzAsync(
+                _toplevel,
+                selectedRechnungenSnapshot,
+                status => StatusMessage = status
+            );
+
+            if (!success)
+            {
+                StatusMessage = "Erstellung abgebrochen.";
+                return;
+            }
+
+            foreach (var rechnung in selectedRechnungenSnapshot)
+            {
+                await _dbService.MarkRechnungAsPrintedAsync(rechnung.Id);
+            }
+
+            StatusMessage = "Rechnungen wurden erstellt.";
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Fehler beim Erstellen der Rechnungen";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            await Task.Delay(1500);
+            StatusMessage = string.Empty;
         }
     }
 

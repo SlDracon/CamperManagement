@@ -8,12 +8,12 @@ namespace CamperManagement.Models
 {
     public class KostenEintrag
     {
-        public string PlatzNr { get; set; }
-        public string Vorname { get; set; }
-        public string Nachname { get; set; }
+        public required string PlatzNr { get; set; }
+        public required string Vorname { get; set; }
+        public required string Nachname { get; set; }
         public decimal WasserBetrag { get; set; }
         public decimal StromBetrag { get; set; }
         public decimal Gesamtbetrag => WasserBetrag + StromBetrag;
-        public decimal Vertragskosten;
+        public decimal Vertragskosten { get; set; }
     }
 }

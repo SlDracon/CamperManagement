@@ -8,9 +8,9 @@ namespace CamperManagement.Models
 {
     public class AbleseEintrag
     {
-        public string PlatzNr { get; set; }
-        public string Vorname { get; set; }
-        public string Nachname { get; set; }
+        public required string PlatzNr { get; set; }
+        public required string Vorname { get; set; }
+        public required string Nachname { get; set; }
         public decimal WasserAlt { get; set; }
         public decimal StromAlt { get; set; }
     }

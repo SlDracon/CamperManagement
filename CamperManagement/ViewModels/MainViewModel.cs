@@ -32,14 +32,24 @@ public partial class MainViewModel : ObservableObject
         NavigateToCommand = new RelayCommand<object>(NavigateTo);
     }
 
-    private void NavigateTo(object view)
+    private void NavigateTo(object? view)
     {
         if (CurrentView != null)
         {
             _navigationStack.Push(CurrentView);
         }
-        CurrentView = view;
-        CanNavigateBack = true;
+
+        if (view != null)
+        {
+            CurrentView = view;
+            CanNavigateBack = true;
+        }
+        else if (_navigationStack.Count > 0)
+        {
+            CurrentView = _navigationStack.Pop();
+            CanNavigateBack = _navigationStack.Count > 0;
+        }
+
         NavigateBackCommand.NotifyCanExecuteChanged();
     }
 

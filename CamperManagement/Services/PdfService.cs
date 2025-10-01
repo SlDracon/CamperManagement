@@ -27,7 +27,12 @@ namespace CamperManagement.Services
     {
         public static async Task<string> GenerateKostenPdfAsync(TopLevel? toplevel, int jahr, List<KostenEintrag> eintraege)
         {
-            var storageProvider = toplevel.StorageProvider;
+            var storageProvider = toplevel?.StorageProvider;
+            if (storageProvider == null)
+            {
+                return string.Empty;
+            }
+
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var filename = $"Kosten_{jahr}_{timestamp}.pdf";
             // Speichern-Dialog anzeigen
@@ -49,7 +54,8 @@ namespace CamperManagement.Services
                 return string.Empty;
             }
             
-            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
+            var parentFolder = await result.GetParentAsync();
+            var pdfPath = parentFolder?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -140,7 +146,12 @@ namespace CamperManagement.Services
 
         public static async Task<string> GenerateTabellePdfAsync(TopLevel? toplevel, IEnumerable<RechnungDisplayModel> rechnungen)
         {
-            var storageProvider = toplevel.StorageProvider;
+            var storageProvider = toplevel?.StorageProvider;
+            if (storageProvider == null)
+            {
+                return string.Empty;
+            }
+
             var filename = $"Tabelle_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
             // Speichern-Dialog anzeigen
             var options = new FilePickerSaveOptions
@@ -161,7 +172,8 @@ namespace CamperManagement.Services
                 return string.Empty;
             }
             
-            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
+            var parentFolder = await result.GetParentAsync();
+            var pdfPath = parentFolder?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -208,7 +220,12 @@ namespace CamperManagement.Services
 
         public static async Task<string> GenerateAbleseTabellePdfAsync(TopLevel? toplevel, IEnumerable<AbleseEintrag> ableseEintraege)
         {
-            var storageProvider = toplevel.StorageProvider;
+            var storageProvider = toplevel?.StorageProvider;
+            if (storageProvider == null)
+            {
+                return string.Empty;
+            }
+
             var filename = $"AbleseTabelle_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
             // Speichern-Dialog anzeigen
             var options = new FilePickerSaveOptions
@@ -229,7 +246,8 @@ namespace CamperManagement.Services
                 return string.Empty;
             }
             
-            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
+            var parentFolder = await result.GetParentAsync();
+            var pdfPath = parentFolder?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -277,9 +295,15 @@ namespace CamperManagement.Services
             IEnumerable<RechnungDisplayModel> rechnungen,
             Action<string?> updateStatus)
         {
+            var storageProvider = toplevel?.StorageProvider;
+            if (storageProvider == null)
+            {
+                updateStatus?.Invoke("Speicherziel nicht verfügbar.");
+                return string.Empty;
+            }
+
             var tempPdfPaths = new List<string>();
 
-            var storageProvider = toplevel.StorageProvider;
             var filename = $"Rechnungen_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
             // Speichern-Dialog anzeigen
             var options = new FilePickerSaveOptions
@@ -300,7 +324,8 @@ namespace CamperManagement.Services
                 return string.Empty;
             }
             
-            var pdfPath = result.GetParentAsync()!.Result?.Path.AbsolutePath;
+            var parentFolder = await result.GetParentAsync();
+            var pdfPath = parentFolder?.Path.AbsolutePath;
             if (pdfPath != null) pdfPath = Path.Combine(pdfPath, filename);
             // Schreibe den Inhalt in die Datei
             await using var stream = await result.OpenWriteAsync();
@@ -345,6 +370,124 @@ namespace CamperManagement.Services
             }
 
             return pdfPath ?? string.Empty;
+        }
+
+        public static async Task<bool> GenerateRechnungenByPlatzAsync(
+            TopLevel? toplevel,
+            IEnumerable<RechnungDisplayModel> rechnungen,
+            Action<string?> updateStatus)
+        {
+            if (toplevel?.StorageProvider == null)
+            {
+                updateStatus?.Invoke("Speicherziel nicht verfügbar.");
+                return false;
+            }
+
+            try
+            {
+                updateStatus?.Invoke("Zielordner auswählen...");
+                var folders = await toplevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = "Zielordner für Rechnungen"
+                });
+
+                var targetFolder = folders?.FirstOrDefault();
+                if (targetFolder == null)
+                {
+                    return false;
+                }
+
+                var targetPath = targetFolder.Path?.LocalPath;
+                if (string.IsNullOrWhiteSpace(targetPath))
+                {
+                    updateStatus?.Invoke("Ordnerpfad konnte nicht ermittelt werden.");
+                    return false;
+                }
+
+                var groupedRechnungen = rechnungen
+                    .GroupBy(r => string.IsNullOrWhiteSpace(r.Platznr) ? "Unbekannt" : r.Platznr!.Trim())
+                    .ToList();
+
+                if (groupedRechnungen.Count == 0)
+                {
+                    updateStatus?.Invoke("Keine Rechnungen ausgewählt.");
+                    return false;
+                }
+
+                foreach (var group in groupedRechnungen)
+                {
+                    var platzNr = group.Key;
+                    updateStatus?.Invoke($"Platz {platzNr}: PDFs werden vorbereitet...");
+
+                    var tempPaths = new List<string>();
+                    try
+                    {
+                        var orderedGroup = group
+                            .OrderBy(r => r.Art)
+                            .ThenBy(r => r.Jahr)
+                            .ThenBy(r => r.Id)
+                            .ToList();
+
+                        foreach (var rechnung in orderedGroup)
+                        {
+                            var singlePdfPath = GenerateRechnungPdf(rechnung);
+                            tempPaths.Add(singlePdfPath);
+                        }
+
+                        var summaryPath = GeneratePlatzSummaryPdf(platzNr, orderedGroup);
+                        tempPaths.Add(summaryPath);
+
+                        var baseFileName = $"Rechnungen_{SanitizeFileName(platzNr)}.pdf";
+                        var destinationPath = Path.Combine(targetPath, baseFileName);
+                        var duplicateIndex = 1;
+                        while (File.Exists(destinationPath))
+                        {
+                            destinationPath = Path.Combine(
+                                targetPath,
+                                $"Rechnungen_{SanitizeFileName(platzNr)}_{duplicateIndex}.pdf");
+                            duplicateIndex++;
+                        }
+
+                        using var writer = new PdfWriter(destinationPath);
+                        using var mergedPdf = new PdfDocument(writer);
+
+                        foreach (var path in tempPaths)
+                        {
+                            using var reader = new PdfReader(path);
+                            using var srcPdf = new PdfDocument(reader);
+                            srcPdf.CopyPagesTo(1, srcPdf.GetNumberOfPages(), mergedPdf);
+                        }
+
+                        updateStatus?.Invoke($"Platz {platzNr}: PDF erstellt.");
+                    }
+                    finally
+                    {
+                        foreach (var tempPath in tempPaths)
+                        {
+                            try
+                            {
+                                if (File.Exists(tempPath))
+                                {
+                                    File.Delete(tempPath);
+                                }
+                            }
+                            catch
+                            {
+                                // Ignoriere Fehler beim Aufräumen
+                            }
+                        }
+                    }
+                }
+
+                updateStatus?.Invoke("Alle PDFs wurden erstellt.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                updateStatus?.Invoke("Fehler beim Erstellen der PDFs.");
+                Console.WriteLine(ex);
+                return false;
+            }
         }
 
         public static string GenerateRechnungPdf(RechnungDisplayModel rechnung)
@@ -471,6 +614,74 @@ namespace CamperManagement.Services
             return tempPath;
         }
 
+        private static string GeneratePlatzSummaryPdf(string platzNr, List<RechnungDisplayModel> rechnungen)
+        {
+            var tempPath = Path.Combine(
+                Path.GetTempPath(),
+                $"Rechnung_{SanitizeFileName(platzNr)}_Summary_{Guid.NewGuid():N}.pdf"
+            );
+
+            using var writer = new PdfWriter(tempPath);
+            using var pdf = new PdfDocument(writer);
+            pdf.SetDefaultPageSize(PageSize.A5);
+            var document = new Document(pdf);
+
+            var boldFont = PdfFontFactory.CreateFont(StandardFonts.TIMES_BOLD);
+            var regularFont = PdfFontFactory.CreateFont(StandardFonts.TIMES_ROMAN);
+
+            document.Add(new Paragraph($"Zusammenfassung Platz {platzNr}")
+                .SetFont(boldFont)
+                .SetFontSize(14)
+                .SetTextAlignment(TextAlignment.CENTER)
+                .SetMarginBottom(20));
+
+            var table = new Table(UnitValue.CreatePercentArray([3, 3, 2])).UseAllAvailableWidth();
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Art").SetFont(boldFont)).SetBackgroundColor(new DeviceRgb(240, 240, 240)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Jahr").SetFont(boldFont)).SetBackgroundColor(new DeviceRgb(240, 240, 240)));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("Betrag").SetFont(boldFont)).SetBackgroundColor(new DeviceRgb(240, 240, 240)));
+
+            foreach (var rechnung in rechnungen)
+            {
+                table.AddCell(new Paragraph(rechnung.Art ?? "-").SetFont(regularFont));
+                table.AddCell(new Paragraph(rechnung.Jahr.ToString()).SetFont(regularFont));
+                table.AddCell(new Paragraph($"{rechnung.Betrag:0.00} €").SetFont(regularFont).SetTextAlignment(TextAlignment.RIGHT));
+            }
+
+            var gesamtbetrag = rechnungen.Sum(r => r.Betrag);
+
+            table.AddCell(new Cell(1, 2)
+                .Add(new Paragraph("Gesamtsumme:").SetFont(boldFont))
+                .SetBackgroundColor(new DeviceRgb(240, 240, 240)));
+            table.AddCell(new Cell()
+                .Add(new Paragraph($"{gesamtbetrag:0.00} €").SetFont(boldFont).SetTextAlignment(TextAlignment.RIGHT))
+                .SetBackgroundColor(new DeviceRgb(240, 240, 240)));
+
+            document.Add(table);
+
+            document.Add(new Paragraph(" "));
+            document.Add(new Paragraph("– Rechnungsbeträge werden eingezogen –")
+                .SetFont(regularFont)
+                .SetFontSize(10)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            document.Close();
+
+            return tempPath;
+        }
+
+        private static string SanitizeFileName(string input)
+        {
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var builder = new StringBuilder(input.Length);
+            foreach (var ch in input)
+            {
+                builder.Append(invalidChars.Contains(ch) ? '_' : ch);
+            }
+
+            var sanitized = builder.ToString().Trim();
+            return string.IsNullOrWhiteSpace(sanitized) ? "Unbekannt" : sanitized;
+        }
+
         public static async Task OpenPdfAsync(string filePath, TopLevel? topLevel)
         {
             try
@@ -481,8 +692,15 @@ namespace CamperManagement.Services
                     return;
                 }
 
+                var launcher = topLevel?.Launcher;
+                if (launcher == null)
+                {
+                    Console.WriteLine("Kein Launcher verfügbar, um die PDF zu öffnen.");
+                    return;
+                }
+
                 // Datei mit dem Launcher des TopLevel öffnen
-                var success = await topLevel.Launcher.LaunchUriAsync(new Uri(filePath));
+                var success = await launcher.LaunchUriAsync(new Uri(filePath));
                 Console.WriteLine($"LaunchFileAsync: {success}");
             }
             catch (Exception ex)
