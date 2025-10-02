@@ -35,7 +35,7 @@ namespace CamperManagement.ViewModels
         private decimal verbrauch;
 
         [ObservableProperty]
-        private decimal faktor = 0.35m;
+        private decimal faktor = 0.5m;
 
         [ObservableProperty]
         private decimal betrag;
@@ -56,7 +56,7 @@ namespace CamperManagement.ViewModels
                 if (e.PropertyName == nameof(SelectedArt))
                 {
                     // Setze den Faktor abhängig von der Art
-                    Faktor = SelectedArt == "Wasser" ? 8m : 0.35m;
+                    Faktor = SelectedArt == "Wasser" ? 8m : 0.5m;
                 }
 
                 if (e.PropertyName == nameof(SelectedArt) || e.PropertyName == nameof(SelectedPlatznummer))

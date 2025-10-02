@@ -89,7 +89,7 @@ namespace CamperManagement.ViewModels
         {
             if (SelectedArt == "Strom")
             {
-                Faktor = 0.35m;
+                Faktor = 0.5m;
             }
             else if (SelectedArt == "Wasser")
             {
