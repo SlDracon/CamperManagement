@@ -206,7 +206,7 @@ namespace CamperManagement.Services
                 table.AddCell(rechnung.Platznr);
                 table.AddCell(rechnung.Vorname);
                 table.AddCell(rechnung.Nachname);
-                table.AddCell($"{rechnung.Verbrauch:0.00}");
+                table.AddCell(rechnung.VerbrauchDisplay);
                 table.AddCell($"{rechnung.Betrag:0.00} €");
                 table.AddCell(rechnung.Jahr.ToString());
                 table.AddCell(rechnung.Art);
@@ -279,9 +279,9 @@ namespace CamperManagement.Services
                 table.AddCell(eintrag.PlatzNr);
                 table.AddCell(eintrag.Vorname);
                 table.AddCell(eintrag.Nachname);
-                table.AddCell($"{eintrag.WasserAlt:0.00}");
+                table.AddCell(eintrag.WasserAltDisplay);
                 table.AddCell(" "); // Leeres Feld für Wasser_Neu
-                table.AddCell($"{eintrag.StromAlt:0.00}");
+                table.AddCell(eintrag.StromAltDisplay);
                 table.AddCell(" "); // Leeres Feld für Strom_Neu
             }
             document.Add(table);
@@ -580,12 +580,12 @@ namespace CamperManagement.Services
             else
             {
                 detailsContentTable.AddCell(new Cell().Add(new Paragraph("Wasser alt:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Alt:0.00} cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph(rechnung.AltDisplay + " cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
                 detailsContentTable.AddCell(new Cell().Add(new Paragraph("Wasser neu:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Neu:0.00} cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph(rechnung.NeuDisplay + " cbm").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
                 detailsContentTable.AddCell(new Cell(1, 2).Add(new Paragraph("______________________________________________________________").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
                 detailsContentTable.AddCell(new Cell().Add(new Paragraph("Verbrauch:").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Verbrauch:0.00} cbm x {rechnung.Faktor:0.00} €").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.VerbrauchDisplay} cbm x {rechnung.Faktor:0.00} €").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
             }
             detailsContentTable.AddCell(new Cell().Add(new Paragraph("Summe:").SetFont(boldFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
             detailsContentTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Betrag:0.00} €").SetFont(boldFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));

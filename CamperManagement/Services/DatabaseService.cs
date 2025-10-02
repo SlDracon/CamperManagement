@@ -438,15 +438,29 @@ namespace CamperManagement.Services
             p.platznr,
             pers.vorname,
             pers.nachname,
-            MAX(CASE WHEN r.type = 'Wasser' THEN r.neu ELSE 0 END) AS wasser_alt,
-            MAX(CASE WHEN r.type = 'Strom' THEN r.neu ELSE 0 END) AS strom_alt
-        FROM rechnungen r
-        JOIN plaetze p ON r.platz_id = p.id
-        JOIN camper c ON c.platz_id = p.id
+            COALESCE((
+                SELECT r_w.neu
+                FROM rechnungen r_w
+                WHERE r_w.platz_id = p.id
+                  AND r_w.type = 'Wasser'
+                ORDER BY r_w.updated DESC, r_w.created DESC, r_w.jahr DESC, r_w.id DESC
+                LIMIT 1
+            ), 0) AS wasser_alt,
+            COALESCE((
+                SELECT r_s.neu
+                FROM rechnungen r_s
+                WHERE r_s.platz_id = p.id
+                  AND r_s.type = 'Strom'
+                ORDER BY r_s.updated DESC, r_s.created DESC, r_s.jahr DESC, r_s.id DESC
+                LIMIT 1
+            ), 0) AS strom_alt
+        FROM camper c
+        JOIN plaetze p ON c.platz_id = p.id
         JOIN camper_personen cp ON c.id = cp.camper_id
         JOIN personen pers ON cp.personen_id = pers.id
         WHERE c.active = 1
-        GROUP BY p.platznr, pers.vorname, pers.nachname
+              AND c.deactivated = '0000-00-00 00:00:00'
+              AND cp.rechnungsadresse = 1
         ORDER BY p.platznr;";
 
             await using var command = new MySqlCommand(query, connection);
@@ -459,8 +473,8 @@ namespace CamperManagement.Services
                     PlatzNr = reader.GetString("platznr"),
                     Vorname = reader.GetString("vorname"),
                     Nachname = reader.GetString("nachname"),
-                    WasserAlt = reader.GetDecimal("wasser_alt"),
-                    StromAlt = reader.GetDecimal("strom_alt")
+                    WasserAlt = Math.Round(reader.GetDecimal("wasser_alt"), 3),
+                    StromAlt = Math.Round(reader.GetDecimal("strom_alt"), 2)
                 });
             }
 

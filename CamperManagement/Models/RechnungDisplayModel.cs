@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 
 namespace CamperManagement.Models
 {
@@ -24,5 +21,17 @@ namespace CamperManagement.Models
         public string? Straße { get; set; }
         public string? PLZ { get; set; }
         public string? Ort { get; set; }
+
+        public string AltDisplay => FormatValue(Alt);
+        public string NeuDisplay => FormatValue(Neu);
+        public string VerbrauchDisplay => FormatValue(Verbrauch);
+
+        private static readonly CultureInfo GermanCulture = CultureInfo.GetCultureInfo("de-DE");
+
+        private string FormatValue(decimal value)
+        {
+            var format = string.Equals(Art, "Wasser", StringComparison.OrdinalIgnoreCase) ? "0.000" : "0.00";
+            return value.ToString(format, GermanCulture);
+        }
     }
 }

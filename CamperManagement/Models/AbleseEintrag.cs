@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 
 namespace CamperManagement.Models
 {
@@ -13,5 +10,10 @@ namespace CamperManagement.Models
         public required string Nachname { get; set; }
         public decimal WasserAlt { get; set; }
         public decimal StromAlt { get; set; }
+
+        private static readonly CultureInfo GermanCulture = CultureInfo.GetCultureInfo("de-DE");
+
+        public string WasserAltDisplay => WasserAlt.ToString("0.000", GermanCulture);
+        public string StromAltDisplay => StromAlt.ToString("0.00", GermanCulture);
     }
 }

@@ -15,6 +15,7 @@ namespace CamperManagement.ViewModels
     {
         private readonly MainViewModel _mainViewModel;
         private readonly DatabaseService _dbService;
+        private readonly int _rechnungId;
 
         public ObservableCollection<string> Arten { get; } = new() { "Strom", "Wasser" };
         public ObservableCollection<string> Platznummern { get; } = new();
@@ -47,6 +48,7 @@ namespace CamperManagement.ViewModels
         {
             _mainViewModel = mainViewModel;
             _dbService = dbService;
+            _rechnungId = rechnung.Id;
 
             // Initialisiere die Werte
             SelectedArt = rechnung.Art;
@@ -101,6 +103,7 @@ namespace CamperManagement.ViewModels
         {
             var updatedRechnung = new Rechnung
             {
+                Id = _rechnungId,
                 PlatzId = await _dbService.GetPlatzIdByPlatznummerAsync(SelectedPlatznummer),
                 Alt = Alt,
                 Neu = Neu,
