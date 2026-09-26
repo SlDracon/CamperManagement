@@ -32,5 +32,6 @@ public static class SearchQuery
         Flush();
         return terms;
     }
-    public static bool Matches(string? query, params string?[] fields) => Parse(query).All(term => fields.Any(field => field?.Contains(term, StringComparison.OrdinalIgnoreCase) == true));
+    public static bool Matches(string? query, params string?[] fields) => MatchesTerms(Parse(query), fields);
+    public static bool MatchesTerms(IReadOnlyList<string> terms, params string?[] fields) => terms.All(term => fields.Any(field => field?.Contains(term, StringComparison.OrdinalIgnoreCase) == true));
 }

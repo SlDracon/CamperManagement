@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Platform.Storage;
 using CamperManagement.Models;
 using CamperManagement.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,7 +12,10 @@ namespace CamperManagement.ViewModels;
 
 public partial class RechnungenViewModel : ViewModelBase
 {
-    private readonly MainViewModel _main; private int _loadVersion, _exportVersion;
+    [ObservableProperty] private RechnungDisplayModel? selectedRechnung;
+    public IRelayCommand EditSelectedCommand { get; }
+    partial void OnSelectedRechnungChanged(RechnungDisplayModel? value) => EditSelectedCommand?.NotifyCanExecuteChanged();
+    private readonly MainViewModel _main; private int _exportVersion;
     [ObservableProperty] private ObservableCollection<RechnungDisplayModel> rechnungenList = new();
     [ObservableProperty] private ObservableCollection<RechnungDisplayModel> filteredRechnungenList = new();
     [ObservableProperty] private ObservableCollection<RechnungDisplayModel> selectedRechnungen = new();
@@ -42,17 +44,19 @@ public partial class RechnungenViewModel : ViewModelBase
     {
         get;
     }
-    public RechnungenViewModel(MainViewModel main)
+    public RechnungenViewModel(MainViewModel main) : base(main.ErrorLog)
     {
         _main = main;
-        LoadDataCommand = new AsyncRelayCommand(LoadDataAsync);
+        EditSelectedCommand = new RelayCommand(() => EditRechnungCommand!.Execute(SelectedRechnung), () => SelectedRechnung != null && !IsBusy && !IsLoading);
+        PropertyChanged += (_, e) => { if (e.PropertyName is nameof(IsBusy) or nameof(IsLoading)) { EditSelectedCommand.NotifyCanExecuteChanged(); LoadDataCommand?.NotifyCanExecuteChanged(); } };
+        LoadDataCommand = new AsyncRelayCommand(LoadDataAsync, () => !IsBusy, AsyncRelayCommandOptions.AllowConcurrentExecutions);
         OpenAddRechnungCommand = new RelayCommand(() => _main.NavigateToCommand.Execute(new AddRechnungViewModel(_main, _main.Database) { OnSavedAsync = LoadDataAsync }));
         EditRechnungCommand = new RelayCommand<RechnungDisplayModel>(r => { if (r != null) _main.NavigateToCommand.Execute(new EditRechnungViewModel(_main, _main.Database, r) { OnSavedAsync = LoadDataAsync }); });
         PrintRechnungCommand = new AsyncRelayCommand(() => ExportAsync(false), CanExport);
         CreateRechnungenCommand = new AsyncRelayCommand(() => ExportAsync(true), CanExport);
-        PrintTabelleCommand = new AsyncRelayCommand(() => RunAsync(async () => { var rows = FilteredRechnungenList.Select(r => r.Snapshot()).ToList(); if (rows.Count == 0) return; using var file = await _main.Pdf.TableAsync(rows); if (file != null && !await _main.Pdf.OpenAsync(file)) StatusMessage = "PDF gespeichert; Viewer nicht verfügbar."; }), () => !IsBusy);
+        PrintTabelleCommand = new AsyncRelayCommand(() => RunExportAsync(async token => { var rows = FilteredRechnungenList.Select(r => r.Snapshot()).ToList(); if (rows.Count == 0) return; using var file = await _main.Pdf.TableAsync(rows, token); if (file != null && !await _main.Pdf.OpenAsync(file)) StatusMessage = "PDF gespeichert; Viewer nicht verfügbar."; }), () => !IsBusy && !IsLoading);
         SelectedRechnungen.CollectionChanged += SelectionChanged;
-        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(IsBusy)) NotifyExport(); };
+        PropertyChanged += (_, e) => { if (e.PropertyName is nameof(IsBusy) or nameof(IsLoading)) NotifyExport(); };
     }
     partial void OnSelectedRechnungenChanging(ObservableCollection<RechnungDisplayModel> value)
     {
@@ -66,51 +70,51 @@ public partial class RechnungenViewModel : ViewModelBase
         NotifyExport();
     }
     private void SelectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => NotifyExport();
-    private bool CanExport() => !IsBusy && SelectedRechnungen?.Count > 0;
+    private bool CanExport() => !IsBusy && !IsLoading && SelectedRechnungen?.Count > 0;
     private void NotifyExport()
     {
         PrintRechnungCommand?.NotifyCanExecuteChanged();
         CreateRechnungenCommand?.NotifyCanExecuteChanged();
         PrintTabelleCommand?.NotifyCanExecuteChanged();
     }
+    public override Task ResumeAsync() => LoadDataAsync();
     public override Task InitializeAsync() => LoadDataAsync();
-    public async Task LoadDataAsync()
+    public Task LoadDataAsync() => RunLoadAsync(async token =>
     {
-        var version = ++_loadVersion;
-        try
-        {
-            var rows = await _main.Database.GetRechnungenAsync();
-            if (version != _loadVersion)
-                return;
-            RechnungenList = new(rows);
-            SelectedRechnungen.Clear();
-            Filter();
-            StatusMessage = null;
-        }
-        catch (Exception) { if (version == _loadVersion) StatusMessage = "Rechnungen konnten nicht geladen werden. Bitte erneut laden."; }
-    }
+        var rows = await _main.Database.GetRechnungenAsync(token);
+        token.ThrowIfCancellationRequested();
+        RechnungenList = new(rows);
+        SelectedRechnungen.Clear();
+        SelectedRechnung = null;
+        Filter();
+    });
     partial void OnRechnungSearchQueryChanged(string value) => Filter();
-    private void Filter() => FilteredRechnungenList = new(RechnungenList.Where(r =>
+    private void Filter()
     {
+        var terms = SearchQuery.Parse(RechnungSearchQuery);
         var de = CultureInfo.GetCultureInfo("de-DE");
-        return SearchQuery.Matches(RechnungSearchQuery, r.Id.ToString(), r.Platznr, r.Art, r.Gedruckt, r.Jahr.ToString(), r.Alt.ToString(de), r.Neu.ToString(de), r.Verbrauch.ToString(de), r.Faktor.ToString(de), r.Betrag.ToString(de), r.Alt.ToString(CultureInfo.InvariantCulture), r.Neu.ToString(CultureInfo.InvariantCulture), r.Verbrauch.ToString(CultureInfo.InvariantCulture), r.Faktor.ToString(CultureInfo.InvariantCulture), r.Betrag.ToString(CultureInfo.InvariantCulture));
-    }));
+        FilteredRechnungenList = new(RechnungenList.Where(r =>
+        {
+        return SearchQuery.MatchesTerms(terms, r.Id.ToString(), r.Platznr, r.Art, r.Gedruckt, r.Jahr.ToString(), r.Alt.ToString(de), r.Neu.ToString(de), r.Verbrauch.ToString(de), r.Faktor.ToString(de), r.Betrag.ToString(de), r.Alt.ToString(CultureInfo.InvariantCulture), r.Neu.ToString(CultureInfo.InvariantCulture), r.Verbrauch.ToString(CultureInfo.InvariantCulture), r.Faktor.ToString(CultureInfo.InvariantCulture), r.Betrag.ToString(CultureInfo.InvariantCulture));
+        }));
+    }
     private async Task ExportAsync(bool grouped)
     {
         if (!CanExport())
             return;
         var snapshot = SelectedRechnungen.Select(r => r.Snapshot()).ToList();
-        await RunAsync(async () =>
+        await RunExportAsync(async token =>
         {
             if (snapshot.Any(r => !r.RecipientResolved))
                 throw new InvalidOperationException("Bei mindestens einer Rechnung muss zuerst der historische Empfänger zugeordnet werden.");
             var version = ++_exportVersion;
             var progress = new Progress<string?>(text => { if (version == _exportVersion) StatusMessage = text; });
-            IStorageFile? file = null;
+            IPdfFile? file = null;
             bool saved;
             try
             {
-                saved = grouped ? await _main.Pdf.ByPlatzAsync(snapshot, progress) : (file = await _main.Pdf.InvoicesAsync(snapshot, progress)) != null;
+                saved = grouped ? await _main.Pdf.ByPlatzAsync(snapshot, progress, token) : (file = await _main.Pdf.InvoicesAsync(snapshot, progress, token)) != null;
+                token.ThrowIfCancellationRequested();
                 ++_exportVersion;
                 if (!saved)
                 {
@@ -119,11 +123,12 @@ public partial class RechnungenViewModel : ViewModelBase
                 }
                 try
                 {
+                    CompleteExportCancellation();
                     await _main.Database.MarkRechnungenAsPrintedAsync(snapshot.Select(r => r.Id).ToArray());
                 }
-                catch (Exception) { StatusMessage = "PDFs gespeichert, aber der Druckstatus konnte nicht gespeichert werden. Bitte erneut versuchen."; return; }
+                catch (Exception ex) { Log.Write(ErrorOperation.Save, ex); StatusMessage = "PDFs gespeichert, aber der Druckstatus konnte nicht gespeichert werden. Bitte erneut versuchen."; return; }
                 await LoadDataAsync();
-                StatusMessage = "Alle ausgewählten Rechnungen wurden gespeichert und als gedruckt markiert.";
+                ShowTemporaryStatus("Alle ausgewählten Rechnungen wurden gespeichert und als gedruckt markiert.");
                 if (file != null && !await _main.Pdf.OpenAsync(file))
                     StatusMessage = "PDF gespeichert und als gedruckt markiert; Viewer nicht verfügbar.";
             }

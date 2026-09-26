@@ -49,7 +49,7 @@ Für Desktop-Arbeit unter Linux gezielt dieses Projekt bauen. Die vollständige 
 | Plattform | Stand |
 |---|---|
 | Linux Desktop | Debug/Release und `linux-x64`-Publish geprüft; nativer Start mit Testdatenbank geprüft |
-| Android | Debug-APK gebaut; Geräteprüfung und bekannte XA0141-Warnungen zu 16-KB-Speicherseiten sind offen |
+| Android | Release-APK und native 16-KB-Ausrichtung geprüft; Android-15-16-KB-Emulator getestet (Details in Plattformprüfungen) |
 | iOS | Projekt vorhanden; Build und Lauf benötigen einen Mac mit Xcode und wurden hier nicht geprüft |
 | Browser | Projekt lässt sich bauen; für einen funktionsfähigen Webbetrieb ist eine Backend-API erforderlich |
 

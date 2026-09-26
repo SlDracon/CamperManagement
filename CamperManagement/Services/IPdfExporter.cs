@@ -1,35 +1,44 @@
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CamperManagement.Models;
 namespace CamperManagement.Services;
 
+public interface IPdfFile : IDisposable { }
+
 public interface IPdfExporter
 {
-    Task<IStorageFile?> InvoicesAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress);
-    Task<bool> ByPlatzAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress);
-    Task<IStorageFile?> TableAsync(IReadOnlyList<RechnungDisplayModel> rows);
-    Task<IStorageFile?> ReadingsAsync(IReadOnlyList<AbleseEintrag> rows);
-    Task<IStorageFile?> CostsAsync(int year, IReadOnlyList<KostenEintrag> rows);
-    Task<bool> OpenAsync(IStorageFile? file);
+    Task<IPdfFile?> InvoicesAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress, CancellationToken cancellationToken = default);
+    Task<bool> ByPlatzAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress, CancellationToken cancellationToken = default);
+    Task<IPdfFile?> TableAsync(IReadOnlyList<RechnungDisplayModel> rows, CancellationToken cancellationToken = default);
+    Task<IPdfFile?> ReadingsAsync(IReadOnlyList<AbleseEintrag> rows, CancellationToken cancellationToken = default);
+    Task<IPdfFile?> CostsAsync(int year, IReadOnlyList<KostenEintrag> rows, CancellationToken cancellationToken = default);
+    Task<bool> OpenAsync(IPdfFile? file);
 }
 public sealed class PdfExporter : IPdfExporter
 {
-    private static TopLevel? Window => Application.Current?.ApplicationLifetime switch
+    public static IPdfExporter Unavailable { get; } = new PdfExporter(() => null);
+    private sealed class StoragePdfFile(IStorageFile file) : IPdfFile
     {
-        IClassicDesktopStyleApplicationLifetime d => d.MainWindow,
-        ISingleViewApplicationLifetime s when s.MainView != null => TopLevel.GetTopLevel(s.MainView),
-        _ => null
-    };
-    private static IStorageProvider Storage => Window?.StorageProvider ?? throw new InvalidOperationException("Speicherziel nicht verfügbar.");
-    public Task<IStorageFile?> InvoicesAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress) => PdfService.GenerateAndMergeRechnungenAsync(Storage, rows, progress);
-    public Task<bool> ByPlatzAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress) => PdfService.GenerateRechnungenByPlatzAsync(Storage, rows, progress);
-    public Task<IStorageFile?> TableAsync(IReadOnlyList<RechnungDisplayModel> rows) => PdfService.GenerateTabellePdfAsync(Storage, rows);
-    public Task<IStorageFile?> ReadingsAsync(IReadOnlyList<AbleseEintrag> rows) => PdfService.GenerateAbleseTabellePdfAsync(Storage, rows);
-    public Task<IStorageFile?> CostsAsync(int year, IReadOnlyList<KostenEintrag> rows) => PdfService.GenerateKostenPdfAsync(Storage, year, rows);
-    public Task<bool> OpenAsync(IStorageFile? file) => PdfService.OpenPdfAsync(file, Window?.Launcher);
+        public IStorageFile File { get; } = file;
+        public void Dispose() => File.Dispose();
+    }
+    private static async Task<IPdfFile?> WrapAsync(Task<IStorageFile?> pending)
+    {
+        var file = await pending;
+        return file == null ? null : new StoragePdfFile(file);
+    }
+    private readonly Func<TopLevel?> _topLevel;
+    private readonly IErrorLog _log;
+    public PdfExporter(Func<TopLevel?> topLevel, IErrorLog? log = null) { _topLevel = topLevel; _log = log ?? NullErrorLog.Instance; }
+    private IStorageProvider Storage => _topLevel()?.StorageProvider ?? throw new InvalidOperationException("Speicherziel nicht verfügbar.");
+    public Task<IPdfFile?> InvoicesAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress, CancellationToken cancellationToken = default) => WrapAsync(PdfService.GenerateAndMergeRechnungenAsync(Storage, rows, progress, cancellationToken));
+    public Task<bool> ByPlatzAsync(IReadOnlyList<RechnungDisplayModel> rows, IProgress<string?> progress, CancellationToken cancellationToken = default) => PdfService.GenerateRechnungenByPlatzAsync(Storage, rows, progress, cancellationToken);
+    public Task<IPdfFile?> TableAsync(IReadOnlyList<RechnungDisplayModel> rows, CancellationToken cancellationToken = default) => WrapAsync(PdfService.GenerateTabellePdfAsync(Storage, rows, cancellationToken));
+    public Task<IPdfFile?> ReadingsAsync(IReadOnlyList<AbleseEintrag> rows, CancellationToken cancellationToken = default) => WrapAsync(PdfService.GenerateAbleseTabellePdfAsync(Storage, rows, cancellationToken));
+    public Task<IPdfFile?> CostsAsync(int year, IReadOnlyList<KostenEintrag> rows, CancellationToken cancellationToken = default) => WrapAsync(PdfService.GenerateKostenPdfAsync(Storage, year, rows, cancellationToken));
+    public Task<bool> OpenAsync(IPdfFile? file) => PdfService.OpenPdfAsync((file as StoragePdfFile)?.File, _topLevel()?.Launcher, _log);
 }

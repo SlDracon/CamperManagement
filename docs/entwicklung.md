@@ -32,7 +32,7 @@ flowchart LR
 
 [`MainViewModel`](../CamperManagement/ViewModels/MainViewModel.cs) stellt Datenbankdienst, PDF-Exporter und Uhr bereit und verwaltet den Navigationsstapel. Die Zuordnung der ViewModels zu Ansichten steht in [`App.axaml`](../CamperManagement/App.axaml). Die Ansichten verwenden dieselbe MainViewModel-Instanz; sie erzeugen keine zweite Laufzeitinstanz beim Setzen des DataContext.
 
-Die Abhängigkeiten lassen sich für Tests injizieren. Parameterlose Produktivkonstruktoren verwenden den normalen Datenbankdienst. Tests verwenden dagegen ausschließlich explizite Verbindungen beziehungsweise Fakes.
+Die Dienste entstehen ausschließlich in `AppServices.Create` am App-Start. Datenbank, PDF-Plattformadapter, Uhr, `IDatabaseConfiguration` und `IErrorLog` werden übergeben. `PdfExporter` erhält den aktuellen `TopLevel` als Funktion; Dateihandles bleiben im Adapter und werden gegenüber ViewModels durch `IPdfFile` gekapselt; ViewModels greifen weder auf `Application.Current` noch auf globale Konfiguration zu. Der injizierte `MainViewModel` koordiniert die Navigation. Tests verwenden explizite Verbindungen beziehungsweise Fakes. Die Design-Vorschau enthält nur synthetische Rechnungen und einen Datenbankadapter, der jeden Zugriff verweigert.
 
 | Baustein | Verantwortung |
 |---|---|
@@ -81,13 +81,13 @@ Migrationen werden über [`SchemaMigration`](../CamperManagement/Services/Schema
 
 ## Asynchrones Verhalten und PDF-Export
 
-`InitializeAsync` und `ResumeAsync` sind abwartbar. Datenbankzugriffe werden nicht versteckt in ViewModel-Konstruktoren gestartet. Bei konkurrierenden Ladevorgängen werden veraltete Antworten anhand einer Anfrageversion verworfen. Speichervorgänge verwenden die zu Beginn übernommenen Eingabewerte.
+`InitializeAsync` und `ResumeAsync` sind abwartbar. Datenbankzugriffe werden nicht versteckt in ViewModel-Konstruktoren gestartet. Leseoperationen geben `CancellationToken` bis an MySqlConnector weiter. Neuladen und Navigation brechen überholte Abfragen ab; vor dem Übernehmen von Ergebnissen wird der Token nochmals geprüft, auch bei nicht kooperierenden Diensten. `IsLoading`, `IsSaving` und `IsExporting` steuern gemeinsame Ladeanzeigen und passende Commands. Fehler oder Abbruch bieten eine erneute Ladeaktion an. Speichervorgänge verwenden die zu Beginn übernommenen Eingabewerte.
 
 Dateidialoge, UI-gebundene Storage-APIs und Statusanzeigen bleiben auf dem UI-Thread. PDF-Erzeugung arbeitet im Hintergrund. Für Exporte werden Listen und ihre Rechnungswerte kopiert, damit spätere Änderungen an Auswahl oder Daten nicht in den laufenden Export geraten.
 
 Ein erfolgreicher PDF-Export und die anschließende Datenbankaktualisierung sind zwei getrennte Schritte. Die Dateisystemoperationen und die Datenbank bilden keine gemeinsame Transaktion. Die Oberfläche meldet deshalb den Sonderfall „Dateien gespeichert, Statusspeicherung fehlgeschlagen“. Ebenso ist ein nicht startender PDF-Viewer kein fehlgeschlagener Dateiexport.
 
-Neue asynchrone Abläufe sollten Fehler sichtbar melden, Doppelaktionen berücksichtigen und Navigation beziehungsweise verspätete Antworten kontrollieren. Die bestehenden Tests nutzen gezielt verzögerte Antworten und den echten Avalonia-Dispatcher.
+PDF-Abbruch wird zwischen Rechnungen und beim nächsten Schreibzugriff geprüft. Dateidialoge selbst werden im Systemdialog abgebrochen; Avalonia bietet dafür keinen CancellationToken. Nach Abschluss aller Dateien wird der Abbruch vor der atomaren Druckstatus-Transaktion deaktiviert. Speichervorgänge und bereits begonnene Commits besitzen bewusst keinen UI-Abbruch. Angefangene Ausgabedateien können erhalten und unvollständig sein. `IErrorLog` protokolliert technische Fehler ohne Exception-Texte oder Nutzdaten; siehe [Betrieb](einrichtung.md#lokale-fehlerprotokolle). Die bestehenden Tests nutzen gezielt verzögerte Antworten und den echten Avalonia-Dispatcher.
 
 ## Entwickeln und prüfen
 
@@ -118,3 +118,7 @@ Er prüft den Start sowie das Laden der beiden Hauptlisten und beendet sich ansc
 Die CI reagiert auf Push, Pull Request und manuellen Start. Sie verwendet eine eigene MariaDB, führt die regulären Tests aus, baut Linux und Android und lädt Testergebnisse hoch. Ein konfigurierter Workflow ist noch kein Nachweis eines erfolgreichen CI-Laufs; dessen Ergebnis ist jeweils am betreffenden Commit zu prüfen.
 
 Vor einer Änderung passende Tests auswählen, anschließend den betroffenen Build prüfen. Testberichte, Build-Ausgaben, lokale Konfiguration und Sicherungen bleiben außerhalb von Git. Die Zuordnung zu fachlichen Szenarien und die Grenzen der automatisierten Prüfung stehen in [Testabdeckung](test-coverage.md).
+
+## Gemeinsame Darstellung und Suche
+
+`Styles.axaml` enthält semantische Farben, Formularabstände und Tabellen-/Toolbar-Stile. `OperationStatus` zeigt Laden, Speichern und Export konsistent. Tabellen erlauben Tastaturfokus und Bearbeitung mit Enter/F2; Felder und Symbolschaltflächen besitzen Automation-Namen. Die Suche zerlegt die Anfrage einmal je Eingabe, nicht pro Datensatz. Eine lokale Messung mit 10.000 synthetischen Rechnungen ergab für zehn Filtervorgänge zusammen etwa 50 ms; dies ist ein Messwert dieses Rechners, keine garantierte Laufzeit. Debouncing/Paging bleiben bei künftig größeren Beständen messungsabhängig.

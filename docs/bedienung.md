@@ -6,7 +6,7 @@
 
 Die Startseite enthält die Registerkarten **Camper** und **Rechnungen**. **Einstellungen** öffnet die Strom- und Wasserpreise; in schmalen Fenstern erscheint dafür ein Zahnrad. **Zurück** führt aus einer Unterseite zur vorherigen Ansicht.
 
-Mit **Neu laden** werden Listen beziehungsweise Einstellungen erneut aus der Datenbank gelesen. Noch nicht gespeicherte Änderungen in den Einstellungen werden dabei ersetzt. Formulare speichern erst beim Betätigen von **Speichern**. Während einer Speicherung sind weitere Speicheraktionen gesperrt.
+Mit **Neu laden** werden Listen beziehungsweise Einstellungen erneut aus der Datenbank gelesen. Noch nicht gespeicherte Änderungen in den Einstellungen werden dabei ersetzt. Formulare speichern erst beim Betätigen von **Speichern**. Während einer Speicherung sind weitere Speicheraktionen gesperrt. Eine Anzeige unterscheidet Laden, Speichern und Export. **Laden abbrechen** beendet die Abfrage; **Erneut laden** wiederholt eine fehlgeschlagene oder abgebrochene Abfrage. Beim Wechsel der Ansicht werden laufende Leseabfragen ebenfalls abgebrochen.
 
 Die Tabellen lassen sich über die Spaltenüberschriften sortieren. Spaltenbreiten können angepasst werden; bei vielen Zeilen oder Spalten stehen Scrollleisten zur Verfügung.
 
@@ -22,7 +22,7 @@ Unter **Camper** erscheinen die aktiven Belegungen mit ihrer Rechnungsadresse.
 
 Anrede und E-Mail sind optional. Leere Vertragskosten werden als **0 Euro** gespeichert. Die Oberfläche bietet keine separate Verwaltung zum Anlegen neuer Platznummern; diese stammen aus der Datenbank.
 
-Ein Doppelklick auf eine Camperzeile öffnet die Bearbeitung. Die Platznummer bleibt dabei fest. **Abbrechen** verwirft die noch nicht gespeicherten Eingaben.
+Eine Camperzeile auswählen und **Bearbeiten**, **Enter** oder **F2** drücken. Alternativ öffnet ein Doppelklick die Bearbeitung. Die Platznummer bleibt dabei fest. **Abbrechen** verwirft die noch nicht gespeicherten Eingaben.
 
 ### Belegungswechsel
 
@@ -56,7 +56,7 @@ Eine **reine Änderung des Faktors** berechnet den vorhandenen Betrag bewusst ni
 
 ### Vorhandene Rechnung bearbeiten
 
-Ein Doppelklick auf eine Rechnung öffnet die Bearbeitung. Der gespeicherte Faktor und die damaligen Werte werden geladen. Das Öffnen ersetzt den Faktor nicht durch den inzwischen aktuellen Standardpreis.
+Eine Rechnung auswählen und **Bearbeiten**, **Enter** oder **F2** drücken. Alternativ öffnet ein Doppelklick die Bearbeitung. Der gespeicherte Faktor und die damaligen Werte werden geladen. Das Öffnen ersetzt den Faktor nicht durch den inzwischen aktuellen Standardpreis.
 
 Art, neuer Zählerstand und Faktor können geändert werden. Platz, Abrechnungsjahr und alter Zählerstand werden über dieses Formular nicht geändert. Beim Speichern schließt sich die Bearbeitung und die Rechnungsliste wird aktualisiert. Eine bewusst geänderte Rechnungsart übernimmt deren aktuellen Standardfaktor.
 
@@ -102,11 +102,13 @@ Die mit „drucken“ beschrifteten Aktionen erzeugen zunächst PDFs. Für Papie
 
 **Rechnungen erstellen** erzeugt hier PDF-Dateien aus vorhandenen Rechnungen. Neue Datenbank-Rechnungen werden mit **+** erfasst. Bei einem Camperwechsel werden Rechnungen verschiedener Empfänger auch am selben Platz getrennt gehalten.
 
+Die Erfolgsmeldung nach dem Rechnungs-PDF-Export wird nach fünf Sekunden automatisch ausgeblendet.
+
 Der Status **Gedruckt** wird bei den beiden Rechnungs-PDF-Exporten erst gesetzt, wenn **alle ausgewählten Rechnungen erfolgreich gespeichert** wurden. Der Status beschreibt den erfolgreichen PDF-Export, keinen nachgewiesenen Papierausdruck. Tabellen, Kostenübersichten und Ablesetabellen ändern diesen Status nicht.
 
 Beim Abbrechen oder bei einem Teilfehler wird für die Auswahl kein neuer Druckstatus gesetzt; bereits vorher gedruckte Rechnungen behalten ihren Status. Nach einem Teilfehler können im Zielordner schon einzelne Dateien vorhanden sein. Meldet die Anwendung „PDFs gespeichert, aber der Druckstatus konnte nicht gespeichert werden“, die Dateien und die Datenbankverbindung prüfen. Ein fehlgeschlagener Viewer-Start bedeutet nicht, dass die PDF-Datei nicht gespeichert wurde.
 
-Während längerer Exporte bleibt die Oberfläche reaktionsfähig. Die exportierten Daten werden zu Beginn festgehalten. Meldet die Anwendung eine fehlende historische Empfängerzuordnung, ist eine administrative Prüfung der betreffenden alten Rechnung nötig; die Empfängerzuordnung kann nicht in diesem Formular repariert werden.
+**Export abbrechen** beendet die Erstellung beim nächsten Abbruchpunkt. Den Speicherdialog selbst über dessen Abbrechen-Schaltfläche schließen. Bereits angefangene Dateien können unvollständig sein; nach Abbruch bitte erneut exportieren. Sind alle Dateien gespeichert, wird der Abbruch für die abschließende Druckstatus-Speicherung deaktiviert. Während längerer Exporte bleibt die Oberfläche reaktionsfähig. Die exportierten Daten werden zu Beginn festgehalten. Meldet die Anwendung eine fehlende historische Empfängerzuordnung, ist eine administrative Prüfung der betreffenden alten Rechnung nötig; die Empfängerzuordnung kann nicht in diesem Formular repariert werden.
 
 ## Häufige Fragen
 

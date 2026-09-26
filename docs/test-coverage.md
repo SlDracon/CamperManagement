@@ -140,3 +140,9 @@ Nicht jede Plattformprüfung ist auf diesem Linux-Rechner ausführbar. Native Da
 ## Ergänzung: lokale Konfiguration und Release-Pipeline
 
 Zusätzliche Unit-Tests prüfen fehlende/defekte Konfiguration, Vorrang der Umgebungsvariable, private Unix-Dateirechte, atomaren Austausch, Validierung und die asynchrone Verbindungsprüfung vor dem Speichern. Ein UI-Test prüft Feldbindung und maskierte Passworteingabe; der bestehende Template-Test enthält auch die neue Einrichtungsansicht. `build/tests` prüft erlaubte Versions-Tags, unsichere Eingaben, Android-Grenzen und aufsteigende Versioncodes.
+
+## Ergänzung: Avalonia-Qualitätsverbesserungen
+
+Zusätzliche Tests prüfen abgebrochene/überholte Datenbankabfragen, Navigation während des Ladens, Wiederholung nach Abbruch, unveränderten Druckstatus bei Exportabbruch, die nicht abbrechbare abschließende Status-Transaktion, Fehlerprotokollierung ohne Nachrichten/Nutzdaten, Rotation und Unix-Dateirechte, synthetische Design-Daten sowie Tab/Enter/F2 und zugängliche Feldnamen. PDF-Tests prüfen Abbruch vor/nach der Dateiauswahl und zwischen Rechnungen. Ein echter Datenbanktest prüft Abbruch und anschließende Wiederverwendbarkeit. Python-Tests sichern ELF-, RELRO- und APK-Ausrichtungsfehler ab.
+
+Der lokale Prüflauf umfasst 130 Unit-, 29 MariaDB-, 44 PDF- und 19 Avalonia-UI-Tests (222 insgesamt), dazu sieben Python-Buildtests. Reale Plattformprüfungen und verbleibende Grenzen stehen in [Plattformprüfungen](platform-checks.md). Die UI-Tests prüfen Automation-Namen, ersetzen jedoch keinen vollständigen Screenreader-Test.

@@ -5,9 +5,8 @@ using MySqlConnector;
 
 namespace CamperManagement.Services;
 
-public sealed class DatabaseConfiguration
+public sealed class DatabaseConfiguration : IDatabaseConfiguration
 {
-    public static DatabaseConfiguration Current { get; } = new();
     private readonly string _path;
     private readonly Func<string?> _environment;
     public bool IsEnvironmentOverride => _environment() != null;

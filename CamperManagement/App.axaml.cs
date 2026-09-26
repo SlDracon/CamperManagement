@@ -1,3 +1,5 @@
+using Avalonia.Controls;
+using CamperManagement.Services;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
@@ -22,21 +24,21 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        DisableAvaloniaDataAnnotationValidation();
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
-            DisableAvaloniaDataAnnotationValidation();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel()
+                DataContext = new MainWindowViewModel(AppServices.Create(() => desktop.MainWindow))
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
             singleViewPlatform.MainView = new MainView
             {
-                DataContext = new MainViewModel()
+                DataContext = AppServices.Create(() => singleViewPlatform.MainView == null ? null : TopLevel.GetTopLevel(singleViewPlatform.MainView))
             };
         }
 

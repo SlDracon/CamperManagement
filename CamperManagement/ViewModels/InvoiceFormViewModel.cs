@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -22,18 +23,27 @@ public partial class InvoiceFormViewModel : ViewModelBase
     {
         get;
     }
-    [ObservableProperty] private string? selectedArt = "Strom";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VerbrauchDisplay))]
+    private string? selectedArt = "Strom";
     [ObservableProperty] private string? selectedPlatznummer;
     [ObservableProperty] private decimal alt;
     [ObservableProperty] private decimal neu;
-    [ObservableProperty] private decimal verbrauch;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VerbrauchDisplay))]
+    private decimal verbrauch;
     [ObservableProperty] private decimal faktor = 0.5m;
     [ObservableProperty] private decimal betrag;
     [ObservableProperty] private int jahr;
     [ObservableProperty] private string neuText = "0";
     [ObservableProperty] private string faktorText = "0,5";
-    [ObservableProperty] private bool isLoading;
     [ObservableProperty] private string? warningMessage;
+    public string VerbrauchDisplay => SelectedArt switch
+    {
+        "Strom" => $"{Verbrauch} kWh",
+        "Wasser" => $"{Verbrauch} m³",
+        _ => Verbrauch.ToString(CultureInfo.CurrentCulture)
+    };
     public Task SelectionTask { get; private set; } = Task.CompletedTask;
     public Action? SetFocusToNeuTextBox
     {
@@ -55,7 +65,7 @@ public partial class InvoiceFormViewModel : ViewModelBase
     {
         get;
     }
-    public InvoiceFormViewModel(MainViewModel main, IDatabaseService db, RechnungDisplayModel? invoice = null)
+    public InvoiceFormViewModel(MainViewModel main, IDatabaseService db, RechnungDisplayModel? invoice = null) : base(main.ErrorLog)
     {
         _main = main;
         _db = db;
@@ -78,7 +88,7 @@ public partial class InvoiceFormViewModel : ViewModelBase
         SaveCommand = new AsyncRelayCommand(() => SaveAsync(false), CanSave);
         SaveAndCloseCommand = new AsyncRelayCommand(() => SaveAsync(true), CanSave);
         CancelCommand = new RelayCommand(() => _main.NavigateBackCommand.Execute(null), () => !IsBusy);
-        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(IsBusy)) { NotifyCommands(); CancelCommand.NotifyCanExecuteChanged(); } };
+        PropertyChanged += (_, e) => { if (e.PropertyName is nameof(IsBusy) or nameof(IsLoading)) { NotifyCommands(); CancelCommand.NotifyCanExecuteChanged(); } };
         _ready = true;
         _selectionValid = _id != null;
         if (_id != null)
@@ -92,19 +102,23 @@ public partial class InvoiceFormViewModel : ViewModelBase
         _active = true;
         if (_id != null)
             return; // Editing preserves the original invoice tariff.
-        await RunAsync(async () =>
+        var loaded = false;
+        await RunLoadAsync(async token =>
         {
-            var places = await _db.GetPlatznummernAsync();
+            var places = await _db.GetPlatznummernAsync(token);
+            token.ThrowIfCancellationRequested();
             if (!_active)
                 return;
             Platznummern.Clear();
             foreach (var p in places)
                 Platznummern.Add(p);
-            await (SelectionTask = RefreshSelectionAsync());
+            loaded = true;
         });
+        if (loaded && _active) await (SelectionTask = RefreshSelectionAsync());
     }
     public override void Deactivate()
     {
+        base.Deactivate();
         _active = false;
         if (IsLoading)
             _selectionValid = false;
@@ -171,7 +185,6 @@ public partial class InvoiceFormViewModel : ViewModelBase
         finally { _parsing = false; }
         NotifyCommands();
     }
-    partial void OnIsLoadingChanged(bool value) => NotifyCommands();
     public string? ValidationMessage => !BillingRules.TryDecimal(NeuText, out _) ? "Bitte einen gültigen neuen Zählerstand eingeben." : !BillingRules.TryDecimal(FaktorText, out _) ? "Bitte einen gültigen Faktor eingeben." : null;
     private void NotifyCommands()
     {
@@ -179,7 +192,7 @@ public partial class InvoiceFormViewModel : ViewModelBase
         SaveCommand?.NotifyCanExecuteChanged();
         SaveAndCloseCommand?.NotifyCanExecuteChanged();
     }
-    private void UpdateWarning() => WarningMessage = Neu < Alt ? "Warnung: Der neue Zählerstand ist kleiner als der alte. Speichern ist weiterhin möglich." : null;
+    private void UpdateWarning() => WarningMessage = Neu < Alt ? "Warnung: Der neue Zählerstand ist kleiner als der alte." : null;
     private void Recalculate()
     {
         try
@@ -200,41 +213,37 @@ public partial class InvoiceFormViewModel : ViewModelBase
         }
         catch (OverflowException) { _calculationValid = false; NotifyCommands(); StatusMessage = "Der Rechnungsbetrag ist zu groß."; }
     }
-    private async Task RefreshSelectionAsync(bool loadFactor = true)
+    private Task RefreshSelectionAsync(bool loadFactor = true) => RunLoadAsync(async token =>
     {
         var request = ++_selectionVersion;
         var art = SelectedArt;
         var place = SelectedPlatznummer;
         var year = Jahr;
-        IsLoading = true;
         _selectionValid = false;
-        try
+        if (art is not ("Strom" or "Wasser") || year < 1901 || year > 2155)
+            return;
+        var factors = (_id == null || loadFactor || _factorArt != art) ? await _db.GetStandardfaktorenAsync(token) : null;
+        var previous = string.IsNullOrWhiteSpace(place) ? 0 : await _db.GetNeuFromLatestRechnungAsync(place, art, token);
+        token.ThrowIfCancellationRequested();
+        if (request != _selectionVersion || !_active)
+            return;
+        if (factors != null && (loadFactor || _factorArt != art || _factorVersion != factors.Version))
         {
-            if (art is not ("Strom" or "Wasser") || year < 1901 || year > 2155)
-                return;
-            var factors = (_id == null || loadFactor || _factorArt != art) ? await _db.GetStandardfaktorenAsync() : null;
-            var previous = string.IsNullOrWhiteSpace(place) ? 0 : await _db.GetNeuFromLatestRechnungAsync(place, art);
-            if (request != _selectionVersion || !_active)
-                return;
-            if (factors != null && (loadFactor || _factorArt != art || _factorVersion != factors.Version))
-            {
-                Faktor = factors.ForArt(art);
-                _factorArt = art;
-                _factorVersion = factors.Version;
-            }
-            if (_id == null)
-                Alt = previous;
-            Recalculate();
-            _selectionValid = true;
-            StatusMessage = null;
-            SetFocusToNeuTextBox?.Invoke();
+            Faktor = factors.ForArt(art);
+            _factorArt = art;
+            _factorVersion = factors.Version;
         }
-        catch (Exception) { if (request == _selectionVersion && _active) StatusMessage = "Zählerstand oder Faktoren konnten nicht geladen werden. Bitte erneut laden."; }
-        finally { if (request == _selectionVersion) { IsLoading = false; NotifyCommands(); } }
-    }
+        if (_id == null)
+            Alt = previous;
+        Recalculate();
+        _selectionValid = true;
+        StatusMessage = null;
+        SetFocusToNeuTextBox?.Invoke();
+    });
     public override Task ResumeAsync()
     {
         _active = true;
+        if (_id == null && Platznummern.Count == 0) return InitializeAsync();
         return _id != null && _selectionValid ? Task.CompletedTask : (SelectionTask = RefreshSelectionAsync(false));
     }
     private bool CanSave() => _active && _selectionValid && _calculationValid && !IsBusy && !IsLoading && !string.IsNullOrWhiteSpace(SelectedPlatznummer) && SelectedArt is "Strom" or "Wasser" && (_id != null || BillingRules.IsAllowedYear(Jahr, _main.Clock)) && BillingRules.TryDecimal(NeuText, out _) && BillingRules.TryDecimal(FaktorText, out _);

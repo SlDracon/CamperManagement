@@ -22,6 +22,9 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Android" />
+    <!-- Avalonia 11 supports Skia 3; these native assets support 16-KB pages. -->
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Android" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
   </ItemGroup>
 

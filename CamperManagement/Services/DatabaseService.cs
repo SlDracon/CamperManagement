@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,22 +10,23 @@ namespace CamperManagement.Services;
 public sealed class DatabaseService : IDatabaseService
 {
     // The explicit constructor is used by all tests; it never falls back to the live server.
-    private readonly string? _connectionString;
+    private readonly Func<string> _connectionString;
     private readonly TimeProvider _clock;
-    public DatabaseService() { _clock = TimeProvider.System; }
+    public DatabaseService(Func<string> connectionString, TimeProvider? clock = null) { _connectionString = connectionString; _clock = clock ?? TimeProvider.System; }
     public DatabaseService(string connectionString, TimeProvider? clock = null)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new ArgumentException("Datenbankverbindung fehlt.");
-        _connectionString = new MySqlConnectionStringBuilder(connectionString) { UseAffectedRows = false }.ConnectionString;
+        var normalized = new MySqlConnectionStringBuilder(connectionString) { UseAffectedRows = false }.ConnectionString;
+        _connectionString = () => normalized;
         _clock = clock ?? TimeProvider.System;
     }
-    public async Task<MySqlConnection> OpenConnectionAsync()
+    public async Task<MySqlConnection> OpenConnectionAsync(CancellationToken cancellationToken = default)
     {
-        var c = new MySqlConnection(_connectionString ?? DatabaseConfiguration.Validate(DatabaseConfiguration.Current.Load()));
+        var c = new MySqlConnection(_connectionString());
         try
         {
-            await c.OpenAsync();
+            await c.OpenAsync(cancellationToken);
             return c;
         }
         catch { await c.DisposeAsync(); throw; }
@@ -36,13 +38,13 @@ public sealed class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue(key, value ?? DBNull.Value);
         return cmd;
     }
-    private async Task<List<T>> ReadAsync<T>(string sql, Func<MySqlDataReader, T> map, params (string, object?)[] args)
+    private async Task<List<T>> ReadAsync<T>(CancellationToken cancellationToken, string sql, Func<MySqlDataReader, T> map, params (string, object?)[] args)
     {
-        await using var c = await OpenConnectionAsync();
+        await using var c = await OpenConnectionAsync(cancellationToken);
         await using var cmd = Command(c, sql, null, args);
-        await using var r = await cmd.ExecuteReaderAsync();
+        await using var r = await cmd.ExecuteReaderAsync(cancellationToken);
         var result = new List<T>();
-        while (await r.ReadAsync())
+        while (await r.ReadAsync(cancellationToken))
             result.Add(map(r));
         return result;
     }
@@ -50,7 +52,7 @@ public sealed class DatabaseService : IDatabaseService
     private const string Active = "c.active=1 AND (c.deactivated IS NULL OR c.deactivated='0000-00-00 00:00:00')";
     // Resolve only the designated billing person, once, even with additional contacts.
     private const string PersonJoin = "JOIN camper_personen cp ON cp.id=(SELECT MIN(cp2.id) FROM camper_personen cp2 WHERE cp2.camper_id=c.id AND cp2.rechnungsadresse=1) JOIN personen pers ON pers.id=cp.personen_id";
-    public Task<List<CamperDisplayModel>> GetActiveCampersAsync() => ReadAsync($"SELECT c.id,p.platznr,pers.*,c.Vertragskosten FROM camper c JOIN plaetze p ON p.id=c.platz_id {PersonJoin} WHERE {Active} ORDER BY p.platznr", r => new CamperDisplayModel
+    public Task<List<CamperDisplayModel>> GetActiveCampersAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, $"SELECT c.id,p.platznr,pers.*,c.Vertragskosten FROM camper c JOIN plaetze p ON p.id=c.platz_id {PersonJoin} WHERE {Active} ORDER BY p.platznr", r => new CamperDisplayModel
     {
         Id = r.GetInt32(0),
         Platznr = Text(r, "platznr"),
@@ -63,18 +65,18 @@ public sealed class DatabaseService : IDatabaseService
         Email = Text(r, "email"),
         Vertragskosten = r.GetDecimal("Vertragskosten")
     });
-    public Task<List<RechnungDisplayModel>> GetRechnungenAsync() => ReadAsync("""
+    public Task<List<RechnungDisplayModel>> GetRechnungenAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, """
         SELECT r.*,p.platznr,s.camper_id,s.anrede,s.vorname,s.nachname,s.strasse,s.plz,s.ort
         FROM rechnungen r JOIN plaetze p ON p.id=r.platz_id
         LEFT JOIN rechnung_empfaenger s ON s.rechnung_id=r.id ORDER BY r.id DESC
         """, r => new RechnungDisplayModel { Id = r.GetInt32("id"), Platznr = Text(r, "platznr"), Alt = r.GetDecimal("alt"), Neu = r.GetDecimal("neu"), Verbrauch = r.GetDecimal("verbrauch"), Faktor = r.GetDecimal("faktor"), Betrag = r.GetDecimal("betrag"), Jahr = r.GetInt32("jahr"), Art = Text(r, "type"), Gedruckt = r.GetBoolean("printed") ? "Ja" : "Nein", CamperId = r["camper_id"] is DBNull ? null : r.GetInt32("camper_id"), RecipientResolved = r["camper_id"] is not DBNull, Anrede = Text(r, "anrede"), Vorname = Text(r, "vorname"), Nachname = r["camper_id"] is DBNull ? "Zuordnung prüfen" : Text(r, "nachname"), Straße = Text(r, "strasse"), PLZ = Text(r, "plz"), Ort = Text(r, "ort") });
-    public Task<List<string>> GetPlatznummernAsync() => ReadAsync("SELECT DISTINCT platznr FROM plaetze ORDER BY platznr", r => r.GetString(0));
-    public Task<List<int>> GetAvailableJahreAsync() => ReadAsync("SELECT DISTINCT jahr FROM rechnungen ORDER BY jahr DESC", r => r.GetInt32(0));
-    public async Task<int> GetPlatzIdByPlatznummerAsync(string? platznummer)
+    public Task<List<string>> GetPlatznummernAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, "SELECT DISTINCT platznr FROM plaetze ORDER BY platznr", r => r.GetString(0));
+    public Task<List<int>> GetAvailableJahreAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, "SELECT DISTINCT jahr FROM rechnungen ORDER BY jahr DESC", r => r.GetInt32(0));
+    public async Task<int> GetPlatzIdByPlatznummerAsync(string? platznummer, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(platznummer))
             throw new ArgumentException("Bitte einen Platz auswählen.");
-        var ids = await ReadAsync("SELECT id FROM plaetze WHERE platznr=@p", r => r.GetInt32(0), ("@p", platznummer));
+        var ids = await ReadAsync(cancellationToken, "SELECT id FROM plaetze WHERE platznr=@p", r => r.GetInt32(0), ("@p", platznummer));
         return ids.Count == 1 ? ids[0] : throw new InvalidOperationException("Platz wurde nicht eindeutig gefunden.");
     }
     private static async Task<int> LockPlatzAsync(MySqlConnection c, MySqlTransaction tx, string? platznummer)
@@ -125,9 +127,9 @@ public sealed class DatabaseService : IDatabaseService
             throw new InvalidOperationException("Der Camper wurde inzwischen geändert oder deaktiviert. Bitte neu laden.");
         await tx.CommitAsync();
     }
-    public async Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int jahr)
+    public async Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int jahr, CancellationToken cancellationToken = default)
     {
-        return await ReadAsync("""
+        return await ReadAsync(cancellationToken, """
             SELECT p.platznr,COALESCE(s.vorname,'') vorname,COALESCE(s.nachname,'Zuordnung prüfen') nachname,
               SUM(CASE WHEN r.type='Wasser' THEN r.betrag ELSE 0 END) wasser,
               SUM(CASE WHEN r.type='Strom' THEN r.betrag ELSE 0 END) strom,COALESCE(MAX(s.vertragskosten),0) kosten
@@ -176,25 +178,25 @@ public sealed class DatabaseService : IDatabaseService
         if (await cmd.ExecuteNonQueryAsync() != 1)
             throw new InvalidOperationException("Rechnung wurde nicht gefunden oder inzwischen verändert.");
     }
-    public async Task<decimal> GetNeuFromLatestRechnungAsync(string? platznummer, string? type)
+    public async Task<decimal> GetNeuFromLatestRechnungAsync(string? platznummer, string? type, CancellationToken cancellationToken = default)
     {
         if (type is not ("Strom" or "Wasser"))
             throw new ArgumentException("Ungültige Rechnungsart.");
-        var values = await ReadAsync("SELECT r.neu FROM rechnungen r JOIN plaetze p ON p.id=r.platz_id WHERE p.platznr=@p AND r.type=@t ORDER BY r.created DESC,r.id DESC LIMIT 1", r => r.GetDecimal(0), ("@p", platznummer), ("@t", type));
+        var values = await ReadAsync(cancellationToken, "SELECT r.neu FROM rechnungen r JOIN plaetze p ON p.id=r.platz_id WHERE p.platznr=@p AND r.type=@t ORDER BY r.created DESC,r.id DESC LIMIT 1", r => r.GetDecimal(0), ("@p", platznummer), ("@t", type));
         return values.FirstOrDefault();
     }
-    public Task<List<AbleseEintrag>> GetAbleseTabelleAsync() => ReadAsync($"""
+    public Task<List<AbleseEintrag>> GetAbleseTabelleAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, $"""
         SELECT p.platznr,pers.vorname,pers.nachname,
         COALESCE((SELECT neu FROM rechnungen r WHERE r.platz_id=p.id AND r.type='Wasser' ORDER BY r.created DESC,r.id DESC LIMIT 1),0) wasser,
         COALESCE((SELECT neu FROM rechnungen r WHERE r.platz_id=p.id AND r.type='Strom' ORDER BY r.created DESC,r.id DESC LIMIT 1),0) strom
         FROM camper c JOIN plaetze p ON p.id=c.platz_id {PersonJoin} WHERE {Active} ORDER BY p.platznr
         """, r => new AbleseEintrag { PlatzNr = Text(r, "platznr"), Vorname = Text(r, "vorname"), Nachname = Text(r, "nachname"), WasserAlt = r.GetDecimal("wasser"), StromAlt = r.GetDecimal("strom") });
-    public async Task<Standardfaktoren> GetStandardfaktorenAsync()
+    public async Task<Standardfaktoren> GetStandardfaktorenAsync(CancellationToken cancellationToken = default)
     {
-        await using var c = await OpenConnectionAsync();
+        await using var c = await OpenConnectionAsync(cancellationToken);
         await using var cmd = Command(c, "SELECT strom,wasser,version FROM standardfaktoren WHERE id=1");
-        await using var reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync())
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
             throw new InvalidOperationException("Die Standardfaktoren fehlen. Bitte die Datenbankmigration ausführen.");
         return new(reader.GetDecimal(0), reader.GetDecimal(1), reader.GetInt64(2));
     }

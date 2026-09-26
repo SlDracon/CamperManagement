@@ -1,25 +1,27 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:views="using:CamperManagement.Views"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:vm="using:CamperManagement.ViewModels"
              x:Class="CamperManagement.Views.DatabaseConnectionView"
              x:DataType="vm:DatabaseConnectionViewModel">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="20" Spacing="8" MaxWidth="520" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource FormPadding}" Spacing="8" MaxWidth="520" HorizontalAlignment="Left">
+        <views:OperationStatus />
             <TextBlock Text="Datenbank verbinden" FontSize="24" />
             <TextBlock Text="Die Verbindung wird nur auf diesem Gerät gespeichert. Beim Speichern werden Zugang und aktuelle Preise geprüft. Der Server muss aus deinem Netzwerk erreichbar sein." TextWrapping="Wrap" />
             <TextBlock Text="Die Verbindung wird über CAMPER_DB_CONNECTION vorgegeben. Bitte die Umgebungsvariable ändern oder entfernen und die Anwendung neu starten." TextWrapping="Wrap" IsVisible="{Binding UsesEnvironment}" />
             <StackPanel Spacing="6" IsEnabled="{Binding !IsBusy}">
                 <TextBlock Text="Server / IP-Adresse" />
-                <TextBox Text="{Binding Server}" Watermark="Datenbankserver" />
+                <TextBox AutomationProperties.Name="Server / IP-Adresse" Text="{Binding Server}" Watermark="Datenbankserver" />
                 <TextBlock Text="Port" />
-                <TextBox Text="{Binding Port}" />
+                <TextBox AutomationProperties.Name="Port" Text="{Binding Port}" />
                 <TextBlock Text="Datenbank" />
-                <TextBox Text="{Binding DatabaseName}" />
+                <TextBox AutomationProperties.Name="Datenbank" Text="{Binding DatabaseName}" />
                 <TextBlock Text="Benutzer" />
-                <TextBox Text="{Binding UserName}" />
+                <TextBox AutomationProperties.Name="Benutzer" Text="{Binding UserName}" />
                 <TextBlock Text="Passwort" />
-                <TextBox Text="{Binding Password}" PasswordChar="●" />
+                <TextBox AutomationProperties.Name="Passwort" Text="{Binding Password}" PasswordChar="●" />
             </StackPanel>
             <TextBlock Text="Die Zugangsdaten liegen im privaten Benutzerverzeichnis dieser Installation. Verwende ein geschütztes Benutzerkonto und ein vertrauenswürdiges Netzwerk." TextWrapping="Wrap" FontSize="12" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />

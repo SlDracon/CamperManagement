@@ -38,7 +38,7 @@ public partial class CamperFormViewModel : ViewModelBase
     {
         get;
     }
-    public CamperFormViewModel(MainViewModel main, IDatabaseService db, CamperDisplayModel? camper = null)
+    public CamperFormViewModel(MainViewModel main, IDatabaseService db, CamperDisplayModel? camper = null) : base(main.ErrorLog)
     {
         _main = main;
         _db = db;
@@ -55,11 +55,12 @@ public partial class CamperFormViewModel : ViewModelBase
             Email = camper.Email;
             VertragskostenText = camper.Vertragskosten.ToString(CultureInfo.GetCultureInfo("de-DE"));
         }
-        SaveCommand = new AsyncRelayCommand(SaveAsync, () => !IsBusy);
+        SaveCommand = new AsyncRelayCommand(SaveAsync, () => !IsBusy && !IsLoading);
         CancelCommand = new RelayCommand(() => _main.NavigateBackCommand.Execute(null), () => !IsBusy);
-        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(IsBusy)) { SaveCommand.NotifyCanExecuteChanged(); CancelCommand.NotifyCanExecuteChanged(); } };
+        PropertyChanged += (_, e) => { if (e.PropertyName is nameof(IsBusy) or nameof(IsLoading)) { SaveCommand.NotifyCanExecuteChanged(); CancelCommand.NotifyCanExecuteChanged(); } };
     }
-    public override Task InitializeAsync() => _id != 0 ? Task.CompletedTask : RunAsync(async () => { var places = await _db.GetPlatznummernAsync(); Platznummern.Clear(); foreach (var p in places) Platznummern.Add(p); });
+    public override Task InitializeAsync() => _id != 0 ? Task.CompletedTask : RunLoadAsync(async token => { var places = await _db.GetPlatznummernAsync(token); token.ThrowIfCancellationRequested(); Platznummern.Clear(); foreach (var p in places) Platznummern.Add(p); });
+    public override Task ResumeAsync() => InitializeAsync();
     private Task SaveAsync() => RunAsync(async () =>
     {
         decimal cost = 0;

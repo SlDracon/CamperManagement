@@ -83,3 +83,8 @@ jobs:
         run: dotnet build CamperManagement.Android -t:InstallAndroidDependencies -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64" -p:AcceptAndroidSdkLicenses=true
       - name: Build Android APK without release credentials
         run: dotnet build CamperManagement.Android -c Debug -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64"
+      - name: Verify Android 16-KB compatibility
+        run: |
+          mapfile -t apks < <(find CamperManagement.Android/bin/Debug -name '*-Signed.apk')
+          [[ ${#apks[@]} -eq 1 ]] || { echo 'Expected one APK'; exit 1; }
+          python3 build/check_android_alignment.py "${apks[0]}"

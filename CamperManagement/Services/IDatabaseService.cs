@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CamperManagement.Models;
@@ -5,21 +6,21 @@ namespace CamperManagement.Services;
 
 public interface IDatabaseService
 {
-    Task<List<CamperDisplayModel>> GetActiveCampersAsync();
-    Task<List<RechnungDisplayModel>> GetRechnungenAsync();
-    Task<List<string>> GetPlatznummernAsync();
+    Task<List<CamperDisplayModel>> GetActiveCampersAsync(CancellationToken cancellationToken = default);
+    Task<List<RechnungDisplayModel>> GetRechnungenAsync(CancellationToken cancellationToken = default);
+    Task<List<string>> GetPlatznummernAsync(CancellationToken cancellationToken = default);
     Task DeactivateOldCamperAsync(string? platznummer);
     Task AddNewCamperAsync(CamperDisplayModel camper);
     Task UpdateCamperAsync(CamperDisplayModel camper);
-    Task<List<int>> GetAvailableJahreAsync();
-    Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int jahr);
+    Task<List<int>> GetAvailableJahreAsync(CancellationToken cancellationToken = default);
+    Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int jahr, CancellationToken cancellationToken = default);
     Task MarkRechnungAsPrintedAsync(int id);
     Task MarkRechnungenAsPrintedAsync(IReadOnlyCollection<int> ids);
     Task AddRechnungAsync(Rechnung rechnung);
-    Task<int> GetPlatzIdByPlatznummerAsync(string? platznummer);
-    Task<decimal> GetNeuFromLatestRechnungAsync(string? platznummer, string? type);
-    Task<List<AbleseEintrag>> GetAbleseTabelleAsync();
+    Task<int> GetPlatzIdByPlatznummerAsync(string? platznummer, CancellationToken cancellationToken = default);
+    Task<decimal> GetNeuFromLatestRechnungAsync(string? platznummer, string? type, CancellationToken cancellationToken = default);
+    Task<List<AbleseEintrag>> GetAbleseTabelleAsync(CancellationToken cancellationToken = default);
     Task UpdateRechnungAsync(Rechnung rechnung);
-    Task<Standardfaktoren> GetStandardfaktorenAsync();
+    Task<Standardfaktoren> GetStandardfaktorenAsync(CancellationToken cancellationToken = default);
     Task SaveStandardfaktorenAsync(Standardfaktoren values);
 }

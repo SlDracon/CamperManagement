@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CamperManagement.ViewModels"
+             x:Class="CamperManagement.Views.OperationStatus" x:DataType="vm:ViewModelBase">
+    <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsLoading}">
+            <TextBlock Text="Daten werden geladen …" VerticalAlignment="Center" />
+            <Button Content="Laden abbrechen" Command="{Binding CancelOperationCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsExporting}">
+            <TextBlock Text="PDF-Export läuft …" VerticalAlignment="Center" />
+            <Button Content="Export abbrechen" Command="{Binding CancelOperationCommand}" />
+        </StackPanel>
+        <Button Content="Erneut laden" Command="{Binding RetryLoadCommand}" IsVisible="{Binding LoadFailed}" />
+        <TextBlock Text="Wird gespeichert …" IsVisible="{Binding IsSaving}" />
+    </StackPanel>
+</UserControl>

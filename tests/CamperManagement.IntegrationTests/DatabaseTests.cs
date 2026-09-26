@@ -51,6 +51,15 @@ public class DatabaseTests : IAsyncLifetime
     }
     private static Rechnung Invoice(string type = "Wasser", int year = 2026) => new() { PlatzId = 1, Alt = 10, Neu = 12.5m, Verbrauch = 2.5m, Faktor = 8, Betrag = 20, Jahr = year, Type = type };
     [Fact]
+    public async Task CancelledReadsReleaseConnectionsAndCanBeRetried()
+    {
+        var token = new CancellationToken(true);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _db.GetActiveCampersAsync(token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _db.GetStandardfaktorenAsync(token));
+        Assert.Single(await _db.GetActiveCampersAsync());
+        Assert.NotNull(await _db.GetStandardfaktorenAsync());
+    }
+    [Fact]
     public async Task D01_D02_D03_ActiveBillingPersonOnly()
     {
         var c = Assert.Single(await _db.GetActiveCampersAsync());

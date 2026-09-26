@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:views="using:CamperManagement.Views"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,25 +9,25 @@
              mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="450"
              x:Class="CamperManagement.Views.RechnungenView"
              x:DataType="vm:RechnungenViewModel">
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-      <vm:RechnungenViewModel />
-    </Design.DataContext>
+    <Design.DataContext><x:Static Member="vm:DesignData.Rechnungen" /></Design.DataContext>
     <Grid RowDefinitions="Auto,Auto,Auto,*">
-        <WrapPanel Grid.Row="0" Margin="0,6,0,4">
-            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding OpenAddRechnungCommand}" Margin="0,0,6,6" ToolTip.Tip="Rechnung hinzufügen" />
-            <Button Content="Tabelle drucken" Command="{Binding PrintTabelleCommand}" Margin="0,0,6,6" />
-            <Button Content="Rechnungen drucken" Command="{Binding PrintRechnungCommand}" Margin="0,0,6,6" />
-            <Button Content="Rechnungen erstellen" Command="{Binding CreateRechnungenCommand}" Margin="0,0,6,6" />
+        <WrapPanel Classes="toolbar" Grid.Row="0" Margin="0,6,0,4">
+            <Button Content="+" Foreground="{DynamicResource PositiveBrush}" FontWeight="ExtraBold" Command="{Binding OpenAddRechnungCommand}" AutomationProperties.Name="Rechnung hinzufügen" ToolTip.Tip="Rechnung hinzufügen" />
+            <Button Content="Tabelle drucken" Command="{Binding PrintTabelleCommand}" />
+            <Button Content="Rechnungen drucken" Command="{Binding PrintRechnungCommand}" />
+            <Button Content="Rechnungen erstellen" Command="{Binding CreateRechnungenCommand}" />
+            <Button Content="Bearbeiten" Command="{Binding EditSelectedCommand}" ToolTip.Tip="Auswahl bearbeiten (Enter oder F2)" />
             <Button Content="Neu laden" Command="{Binding LoadDataCommand}" Margin="10,0,0,6" />
         </WrapPanel>
-        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" TextWrapping="Wrap"
+        <StackPanel Grid.Row="1">
+        <views:OperationStatus />
+        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"
                    IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"
                    Margin="0,0,0,8" />
-        <TextBox Grid.Row="2" Watermark="Suche..." Text="{Binding RechnungSearchQuery, Mode=TwoWay}" Margin="0,0,0,6" />
+        </StackPanel>
+        <TextBox Grid.Row="2" AutomationProperties.Name="Rechnungen suchen" Watermark="Suche..." Text="{Binding RechnungSearchQuery, Mode=TwoWay}" Margin="0,0,0,6" />
 
-        <DataGrid Grid.Row="3" ItemsSource="{Binding FilteredRechnungenList}"
+        <DataGrid Classes="records" AutomationProperties.Name="Rechnungen" SelectedItem="{Binding SelectedRechnung, Mode=TwoWay}" Grid.Row="3" ItemsSource="{Binding FilteredRechnungenList}"
                   AutoGenerateColumns="False"
                   CanUserSortColumns="True"
                   CanUserResizeColumns="True"
@@ -34,9 +35,12 @@
                   IsReadOnly="True"
                   SelectionMode="Extended"
                   GridLinesVisibility="All"
-                  Focusable="False"
-                  BorderThickness="1" BorderBrush="Gray"
+
                   DoubleTapped="OnRechnungDoubleTapped">
+            <DataGrid.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding EditSelectedCommand}" />
+                <KeyBinding Gesture="F2" Command="{Binding EditSelectedCommand}" />
+            </DataGrid.KeyBindings>
           <Interaction.Behaviors>
               <behavior:DataGridSelectedItemsBehavior SelectedItems="{Binding SelectedRechnungen}" />
           </Interaction.Behaviors>

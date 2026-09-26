@@ -116,6 +116,6 @@ public class BillingTests
     public void X08_ExplicitTestConnectionNeverFallsBack()
     {
         Assert.Throws<ArgumentException>(() => new DatabaseService(""));
-        Assert.Throws<ArgumentException>(() => new DatabaseService(null!));
+        Assert.Throws<ArgumentException>(() => new DatabaseService((string)null!));
     }
 }

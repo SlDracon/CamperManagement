@@ -128,6 +128,9 @@ jobs:
           [[ ${#apks[@]} -eq 1 ]] || { echo 'Expected exactly one signed APK.' >&2; exit 1; }
           apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
           "$apksigner" verify --verbose --print-certs "${apks[0]}"
+          python3 build/check_android_alignment.py "${apks[0]}"
+          zipalign=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort -V | tail -1)
+          "$zipalign" -c -P 16 4 "${apks[0]}"
           cp "${apks[0]}" "artifacts/packages/CamperManagement-${RELEASE_VERSION}-android.apk"
       - name: Remove private keystore
         if: always()

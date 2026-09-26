@@ -1,3 +1,4 @@
+using System.Threading;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
@@ -24,8 +25,9 @@ namespace CamperManagement.Services
     public static class PdfService
     {
         private static readonly CultureInfo GermanCulture = CultureInfo.GetCultureInfo("de-DE");
-        public static async Task<IStorageFile?> GenerateKostenPdfAsync(IStorageProvider? storageProvider, int jahr, IEnumerable<KostenEintrag> eintraege)
+        public static async Task<IStorageFile?> GenerateKostenPdfAsync(IStorageProvider? storageProvider, int jahr, IEnumerable<KostenEintrag> eintraege, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (storageProvider == null)
             {
                 return null;
@@ -55,7 +57,7 @@ namespace CamperManagement.Services
             }
 
             // Schreibe den Inhalt in die Datei
-            return await WriteFileAsync(result, stream => WriteKostenPdf(stream, jahr, snapshot));
+            return await WriteFileAsync(result, cancellationToken, stream => WriteKostenPdf(stream, jahr, snapshot));
         }
 
         private static void WriteKostenPdf(Stream stream, int jahr, IReadOnlyList<KostenEintrag> eintraege)
@@ -144,8 +146,9 @@ namespace CamperManagement.Services
 
         }
 
-        public static async Task<IStorageFile?> GenerateTabellePdfAsync(IStorageProvider? storageProvider, IEnumerable<RechnungDisplayModel> rechnungen)
+        public static async Task<IStorageFile?> GenerateTabellePdfAsync(IStorageProvider? storageProvider, IEnumerable<RechnungDisplayModel> rechnungen, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (storageProvider == null)
             {
                 return null;
@@ -174,7 +177,7 @@ namespace CamperManagement.Services
             }
 
             // Schreibe den Inhalt in die Datei
-            return await WriteFileAsync(result, stream => WriteTabellePdf(stream, snapshot));
+            return await WriteFileAsync(result, cancellationToken, stream => WriteTabellePdf(stream, snapshot));
         }
 
         private static void WriteTabellePdf(Stream stream, IReadOnlyList<RechnungDisplayModel> rechnungen)
@@ -219,8 +222,9 @@ namespace CamperManagement.Services
 
         }
 
-        public static async Task<IStorageFile?> GenerateAbleseTabellePdfAsync(IStorageProvider? storageProvider, IEnumerable<AbleseEintrag> ableseEintraege)
+        public static async Task<IStorageFile?> GenerateAbleseTabellePdfAsync(IStorageProvider? storageProvider, IEnumerable<AbleseEintrag> ableseEintraege, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (storageProvider == null)
             {
                 return null;
@@ -249,7 +253,7 @@ namespace CamperManagement.Services
             }
 
             // Schreibe den Inhalt in die Datei
-            return await WriteFileAsync(result, stream => WriteAbleseTabellePdf(stream, snapshot));
+            return await WriteFileAsync(result, cancellationToken, stream => WriteAbleseTabellePdf(stream, snapshot));
         }
 
         private static void WriteAbleseTabellePdf(Stream stream, IReadOnlyList<AbleseEintrag> ableseEintraege)
@@ -295,8 +299,9 @@ namespace CamperManagement.Services
         public static async Task<IStorageFile?> GenerateAndMergeRechnungenAsync(
             IStorageProvider? storageProvider,
             IEnumerable<RechnungDisplayModel> rechnungen,
-            IProgress<string?> updateStatus)
+            IProgress<string?> updateStatus, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (storageProvider == null)
             {
                 updateStatus.Report("Speicherziel nicht verfügbar.");
@@ -327,7 +332,7 @@ namespace CamperManagement.Services
             }
 
             // Schreibe den Inhalt in die Datei
-            return await WriteFileAsync(result, stream =>
+            return await WriteFileAsync(result, cancellationToken, stream =>
             {
                 var tempPdfPaths = new List<string>();
                 try
@@ -335,6 +340,7 @@ namespace CamperManagement.Services
                     var current = 0;
                     foreach (var rechnung in selectedRechnungen)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         updateStatus.Report($"Rechnung {++current}/{selectedRechnungen.Count} wird generiert...");
                         tempPdfPaths.Add(GenerateRechnungPdf(rechnung));
                     }
@@ -344,6 +350,7 @@ namespace CamperManagement.Services
                     using var mergedPdf = new PdfDocument(writer);
                     foreach (var path in tempPdfPaths)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         using var reader = new PdfReader(path);
                         using var srcPdf = new PdfDocument(reader);
                         srcPdf.CopyPagesTo(1, srcPdf.GetNumberOfPages(), mergedPdf);
@@ -363,8 +370,9 @@ namespace CamperManagement.Services
         public static async Task<bool> GenerateRechnungenByPlatzAsync(
             IStorageProvider? storageProvider,
             IEnumerable<RechnungDisplayModel> rechnungen,
-            IProgress<string?> updateStatus)
+            IProgress<string?> updateStatus, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (storageProvider == null)
             {
                 updateStatus.Report("Speicherziel nicht verfügbar.");
@@ -382,6 +390,7 @@ namespace CamperManagement.Services
                 });
 
                 using var targetFolder = folders?.FirstOrDefault();
+                cancellationToken.ThrowIfCancellationRequested();
                 if (targetFolder == null)
                 {
                     return false;
@@ -399,6 +408,7 @@ namespace CamperManagement.Services
 
                 foreach (var group in groupedRechnungen)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var platzNr = group.Key.Platz;
                     updateStatus.Report($"Platz {platzNr}: PDFs werden vorbereitet...");
 
@@ -415,14 +425,14 @@ namespace CamperManagement.Services
 
                     using var destination = await targetFolder.CreateFileAsync(destinationName)
                         ?? throw new IOException("Die PDF-Datei konnte nicht angelegt werden.");
-                    await using var output = await destination.OpenWriteAsync();
-                    await Task.Run(() => WritePlatzPdf(output, platzNr, group, updateStatus));
+                    await WriteFileAsync(destination, cancellationToken, output => WritePlatzPdf(output, platzNr, group, updateStatus, cancellationToken));
                     updateStatus.Report($"Platz {platzNr}: PDF erstellt.");
                 }
 
                 updateStatus.Report("Alle PDFs wurden erstellt.");
                 return true;
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 updateStatus.Report("Fehler beim Erstellen der PDFs.");
@@ -431,7 +441,7 @@ namespace CamperManagement.Services
         }
 
         private static void WritePlatzPdf(Stream output, string platzNr,
-            IEnumerable<RechnungDisplayModel> rechnungen, IProgress<string?> updateStatus)
+            IEnumerable<RechnungDisplayModel> rechnungen, IProgress<string?> updateStatus, CancellationToken cancellationToken)
         {
             var tempPaths = new List<string>();
             try
@@ -440,6 +450,7 @@ namespace CamperManagement.Services
                 var current = 0;
                 foreach (var rechnung in orderedGroup)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     updateStatus.Report($"Platz {platzNr}: Rechnung {++current}/{orderedGroup.Count} wird generiert...");
                     tempPaths.Add(GenerateRechnungPdf(rechnung));
                 }
@@ -449,6 +460,7 @@ namespace CamperManagement.Services
                 using var mergedPdf = new PdfDocument(writer);
                 foreach (var path in tempPaths)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     using var reader = new PdfReader(path);
                     using var srcPdf = new PdfDocument(reader);
                     srcPdf.CopyPagesTo(1, srcPdf.GetNumberOfPages(), mergedPdf);
@@ -462,14 +474,8 @@ namespace CamperManagement.Services
                     {
                         File.Delete(tempPath);
                     }
-                    catch (IOException ex)
-                    {
-                        Console.WriteLine($"Temporäre PDF konnte nicht gelöscht werden: {ex.Message}");
-                    }
-                    catch (UnauthorizedAccessException ex)
-                    {
-                        Console.WriteLine($"Temporäre PDF konnte nicht gelöscht werden: {ex.Message}");
-                    }
+                    catch (IOException) { }
+                    catch (UnauthorizedAccessException) { }
                 }
             }
         }
@@ -691,12 +697,14 @@ namespace CamperManagement.Services
             return string.IsNullOrWhiteSpace(sanitized) ? "Unbekannt" : sanitized;
         }
 
-        private static async Task<IStorageFile> WriteFileAsync(IStorageFile file, Action<Stream> write)
+        private static async Task<IStorageFile> WriteFileAsync(IStorageFile file, CancellationToken cancellationToken, Action<Stream> write)
         {
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 await using (var stream = await file.OpenWriteAsync())
-                    await Task.Run(() => write(stream));
+                    await Task.Run(() => { cancellationToken.ThrowIfCancellationRequested(); write(new CancellationWriteStream(stream, cancellationToken)); }, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
                 return file;
             }
             catch
@@ -707,6 +715,7 @@ namespace CamperManagement.Services
                     file.Dispose();
                 }
                 catch { }
+                cancellationToken.ThrowIfCancellationRequested();
                 throw;
             }
         }
@@ -725,7 +734,7 @@ namespace CamperManagement.Services
             if (rows.Any(r => !r.RecipientResolved))
                 throw new InvalidOperationException("Historischer Rechnungsempfänger muss zuerst zugeordnet werden.");
         }
-        public static async Task<bool> OpenPdfAsync(IStorageFile? file, ILauncher? launcher)
+        public static async Task<bool> OpenPdfAsync(IStorageFile? file, ILauncher? launcher, IErrorLog? log = null)
         {
             if (file == null || launcher == null)
                 return false;
@@ -733,7 +742,7 @@ namespace CamperManagement.Services
             {
                 return await launcher.LaunchFileAsync(file);
             }
-            catch { return false; }
+            catch (Exception ex) { (log ?? NullErrorLog.Instance).Write(ErrorOperation.OpenPdf, ex); return false; }
         }
     }
 }

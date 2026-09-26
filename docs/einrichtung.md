@@ -136,3 +136,9 @@ Das Browser-Projekt ist vorhanden und wurde kompiliert. Der Datenbankzugriff der
 | Gesamte Solution baut unter Linux nicht | Zunächst nur Desktop beziehungsweise die Test-Solution bauen; Fehler zu iOS oder fehlenden mobilen Workloads getrennt behandeln |
 
 Bei einem Prozessabsturz zunächst feststellen, ob Rider oder die gestartete Anwendung abstürzt. Einen Fehler der Anwendung möglichst mit dem gezielten Desktop-Build und einem Start im Terminal nachvollziehen. SDK-Version, Plattform, vollständige Fehlermeldung und auslösenden Arbeitsschritt festhalten. Für Testfälle synthetische Daten verwenden; Verbindungskennwörter aus weitergegebenen Protokollen entfernen.
+
+## Lokale Fehlerprotokolle
+
+Technische Fehler werden unter `LocalApplicationData/CamperManagement/logs/` gespeichert: unter Linux normalerweise `~/.local/share/CamperManagement/logs/`, unter Windows `%LOCALAPPDATA%/CamperManagement/logs/`, unter Android im privaten App-Verzeichnis. Es gibt höchstens zwei Dateien (`errors.jsonl` und `errors.previous.jsonl`) mit jeweils 256 KiB. Unix-Verzeichnisse haben Rechte 0700, Dateien 0600.
+
+Die Einträge enthalten UTC-Zeit, Operationsart, Exception-Typ, HResult, Typ der inneren Exception und bis zu zwölf Methodennamen. Kennwörter, Connection-Strings, SQL, Kundendaten, Exception-Nachrichten und lokale Quelldateipfade werden nicht geschrieben. Kann das Protokoll nicht geschrieben werden, bleibt die ursprüngliche Benutzeraktion davon unabhängig. Das Protokoll erfasst behandelte Anwendungsfehler; für native Prozessabstürze sind zusätzlich Systemprotokolle bzw. Android `logcat` nötig. Die bestehende Speicherung der Datenbankzugangsdaten bleibt unverändert.

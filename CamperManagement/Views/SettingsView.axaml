@@ -1,18 +1,20 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:views="using:CamperManagement.Views"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:vm="using:CamperManagement.ViewModels"
              x:Class="CamperManagement.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="20" Spacing="10" MaxWidth="520" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource FormPadding}" Spacing="10" MaxWidth="520" HorizontalAlignment="Left">
+        <views:OperationStatus />
             <TextBlock Text="Strom- und Wasserpreise" FontSize="24" />
             <TextBlock Text="Nach dem Speichern gelten diese Faktoren sofort für neue Rechnungen auf allen Geräten – unabhängig vom Abrechnungsjahr. Bestehende Rechnungen behalten ihren gespeicherten Faktor."
                        TextWrapping="Wrap" />
             <TextBlock Text="Strom – Euro je kWh" />
-            <TextBox Text="{Binding StromText}" IsEnabled="{Binding !IsBusy}" />
+            <TextBox AutomationProperties.Name="Strom – Euro je kWh" Text="{Binding StromText}" IsEnabled="{Binding CanEdit}" />
             <TextBlock Text="Wasser – Euro je m³" />
-            <TextBox Text="{Binding WasserText}" IsEnabled="{Binding !IsBusy}" />
+            <TextBox AutomationProperties.Name="Wasser – Euro je m³" Text="{Binding WasserText}" IsEnabled="{Binding CanEdit}" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"
                        IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />
             <StackPanel Orientation="Horizontal" Spacing="10">

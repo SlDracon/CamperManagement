@@ -1,0 +1,17 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <SolidColorBrush x:Key="ErrorBrush">#8B0000</SolidColorBrush>
+        <SolidColorBrush x:Key="WarningBrush">#9C5700</SolidColorBrush>
+        <SolidColorBrush x:Key="PositiveBrush">#008000</SolidColorBrush>
+        <SolidColorBrush x:Key="TableBorderBrush">#808080</SolidColorBrush>
+        <Thickness x:Key="FormPadding">20</Thickness>
+    </Styles.Resources>
+    <Style Selector="WrapPanel.toolbar > Button">
+        <Setter Property="Margin" Value="0,0,6,6" />
+    </Style>
+    <Style Selector="DataGrid.records">
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource TableBorderBrush}" />
+    </Style>
+</Styles>

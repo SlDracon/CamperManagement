@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CamperManagement.ViewModels;
 
@@ -6,8 +6,8 @@ public partial class MainWindowViewModel : ObservableObject
 {
     public object MainView { get; }
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(MainViewModel main)
     {
-        MainView = new MainViewModel();
+        MainView = main;
     }
 }

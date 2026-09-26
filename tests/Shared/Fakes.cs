@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Reflection;
 using Avalonia.Platform.Storage;
 using CamperManagement.Models;
@@ -42,17 +43,17 @@ public class FakeDatabase : IDatabaseService
         if (SaveError != null)
             throw SaveError;
     }
-    public Task<List<CamperDisplayModel>> GetActiveCampersAsync()
+    public Task<List<CamperDisplayModel>> GetActiveCampersAsync(CancellationToken cancellationToken = default)
     {
         Calls++;
         return Task.FromResult(Campers.ToList());
     }
-    public Task<List<RechnungDisplayModel>> GetRechnungenAsync()
+    public Task<List<RechnungDisplayModel>> GetRechnungenAsync(CancellationToken cancellationToken = default)
     {
         Calls++;
         return InvoiceLoader?.Invoke() ?? Task.FromResult(Invoices.ToList());
     }
-    public Task<List<string>> GetPlatznummernAsync()
+    public Task<List<string>> GetPlatznummernAsync(CancellationToken cancellationToken = default)
     {
         Calls++;
         return Task.FromResult(Places.ToList());
@@ -76,8 +77,8 @@ public class FakeDatabase : IDatabaseService
         SavedCamper = c.Snapshot();
         return Task.CompletedTask;
     }
-    public Task<List<int>> GetAvailableJahreAsync() => Task.FromResult(new List<int> { 2025, 2026 });
-    public Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int y) => Task.FromResult(new List<KostenEintrag>());
+    public Task<List<int>> GetAvailableJahreAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<int> { 2025, 2026 });
+    public Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int y, CancellationToken cancellationToken = default) => Task.FromResult(new List<KostenEintrag>());
     public Task MarkRechnungAsPrintedAsync(int id) => MarkRechnungenAsPrintedAsync(new[] { id });
     public async Task MarkRechnungenAsPrintedAsync(IReadOnlyCollection<int> ids)
     {
@@ -94,9 +95,9 @@ public class FakeDatabase : IDatabaseService
         Adds++;
         SavedInvoice = r;
     }
-    public Task<int> GetPlatzIdByPlatznummerAsync(string? p) => Task.FromResult(Places.Contains(p ?? "") ? Places.IndexOf(p!) + 1 : throw new ArgumentException("Unbekannter Platz"));
-    public Task<decimal> GetNeuFromLatestRechnungAsync(string? p, string? t) => Reading(p, t);
-    public Task<List<AbleseEintrag>> GetAbleseTabelleAsync() => Task.FromResult(new List<AbleseEintrag>());
+    public Task<int> GetPlatzIdByPlatznummerAsync(string? p, CancellationToken cancellationToken = default) => Task.FromResult(Places.Contains(p ?? "") ? Places.IndexOf(p!) + 1 : throw new ArgumentException("Unbekannter Platz"));
+    public Task<decimal> GetNeuFromLatestRechnungAsync(string? p, string? t, CancellationToken cancellationToken = default) => Reading(p, t);
+    public Task<List<AbleseEintrag>> GetAbleseTabelleAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<AbleseEintrag>());
     public Task UpdateRechnungAsync(Rechnung r)
     {
         Save();
@@ -104,7 +105,7 @@ public class FakeDatabase : IDatabaseService
         SavedInvoice = r;
         return Task.CompletedTask;
     }
-    public Task<Standardfaktoren> GetStandardfaktorenAsync()
+    public Task<Standardfaktoren> GetStandardfaktorenAsync(CancellationToken cancellationToken = default)
     {
         Calls++;
         return FactorLoader?.Invoke() ?? Task.FromResult(Factors);
@@ -121,16 +122,18 @@ public class FakeDatabase : IDatabaseService
 }
 public class FakePdf : IPdfExporter
 {
+    private sealed class FakeFile(IStorageFile file) : IPdfFile { public void Dispose() => file.Dispose(); }
+    private static async Task<IPdfFile?> Wrap(Task<IStorageFile?> task) { var file = await task; return file == null ? null : new FakeFile(file); }
     public Func<IReadOnlyList<RechnungDisplayModel>, Task<IStorageFile?>> Export = _ => Task.FromResult<IStorageFile?>(null);
     public Func<IReadOnlyList<RechnungDisplayModel>, Task<bool>> Group = _ => Task.FromResult(false);
     public Func<IReadOnlyList<RechnungDisplayModel>, IProgress<string?>, Task<IStorageFile?>>? ExportWithProgress;
     public bool Opens = true; public int OpenCount;
-    public Task<IStorageFile?> InvoicesAsync(IReadOnlyList<RechnungDisplayModel> r, IProgress<string?> p) => ExportWithProgress?.Invoke(r, p) ?? Export(r);
-    public Task<bool> ByPlatzAsync(IReadOnlyList<RechnungDisplayModel> r, IProgress<string?> p) => Group(r);
-    public Task<IStorageFile?> TableAsync(IReadOnlyList<RechnungDisplayModel> r) => Export(r);
-    public Task<IStorageFile?> ReadingsAsync(IReadOnlyList<AbleseEintrag> r) => Task.FromResult<IStorageFile?>(null);
-    public Task<IStorageFile?> CostsAsync(int y, IReadOnlyList<KostenEintrag> r) => Task.FromResult<IStorageFile?>(null);
-    public Task<bool> OpenAsync(IStorageFile? file)
+    public Task<IPdfFile?> InvoicesAsync(IReadOnlyList<RechnungDisplayModel> r, IProgress<string?> p, CancellationToken cancellationToken = default) => Wrap(ExportWithProgress?.Invoke(r, p) ?? Export(r));
+    public Task<bool> ByPlatzAsync(IReadOnlyList<RechnungDisplayModel> r, IProgress<string?> p, CancellationToken cancellationToken = default) => Group(r);
+    public Task<IPdfFile?> TableAsync(IReadOnlyList<RechnungDisplayModel> r, CancellationToken cancellationToken = default) => Wrap(Export(r));
+    public Task<IPdfFile?> ReadingsAsync(IReadOnlyList<AbleseEintrag> r, CancellationToken cancellationToken = default) => Task.FromResult<IPdfFile?>(null);
+    public Task<IPdfFile?> CostsAsync(int y, IReadOnlyList<KostenEintrag> r, CancellationToken cancellationToken = default) => Task.FromResult<IPdfFile?>(null);
+    public Task<bool> OpenAsync(IPdfFile? file)
     {
         OpenCount++;
         return Task.FromResult(Opens);

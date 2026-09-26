@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:CamperManagement.Views"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,10 +9,11 @@
         x:Class="CamperManagement.Views.PrintSelectionView"
         x:DataType="vm:PrintSelectionViewModel">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="20">
-        <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" Foreground="DarkRed" TextWrapping="Wrap" Margin="0,0,0,8" />
+    <StackPanel Margin="{DynamicResource FormPadding}">
+        <views:OperationStatus />
+        <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
         <TextBlock Text="Jahr auswählen" />
-        <ComboBox IsEnabled="{Binding !IsBusy}" ItemsSource="{Binding Jahre}" SelectedItem="{Binding SelectedJahr}" />
+        <ComboBox AutomationProperties.Name="Jahr auswählen" IsEnabled="{Binding !IsBusy}" ItemsSource="{Binding Jahre}" SelectedItem="{Binding SelectedJahr}" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="Drucken" Command="{Binding PrintCommand}" />

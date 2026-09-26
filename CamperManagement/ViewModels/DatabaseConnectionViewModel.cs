@@ -10,7 +10,7 @@ namespace CamperManagement.ViewModels;
 
 public partial class DatabaseConnectionViewModel : ViewModelBase
 {
-    private readonly DatabaseConfiguration _configuration;
+    private readonly IDatabaseConfiguration _configuration;
     private readonly Func<string, Task> _check;
     private readonly Func<Task> _saved;
     private readonly MySqlConnectionStringBuilder _previous;
@@ -21,11 +21,11 @@ public partial class DatabaseConnectionViewModel : ViewModelBase
     [ObservableProperty] private string password = "";
     public bool UsesEnvironment => _configuration.IsEnvironmentOverride;
     public IAsyncRelayCommand SaveCommand { get; }
-    public DatabaseConnectionViewModel(DatabaseConfiguration configuration, Func<Task> saved, Func<string, Task>? check = null)
+    public DatabaseConnectionViewModel(IDatabaseConfiguration configuration, Func<Task> saved, Func<string, Task>? check = null, IErrorLog? log = null) : base(log)
     {
         _configuration = configuration;
         _saved = saved;
-        _check = check ?? (async value => { await new DatabaseService(value).GetStandardfaktorenAsync(); });
+        _check = check ?? (_ => throw new InvalidOperationException("Verbindungsprüfung nicht verfügbar."));
         try { _previous = new MySqlConnectionStringBuilder(configuration.Load() ?? ""); }
         catch (ArgumentException) { _previous = new MySqlConnectionStringBuilder(); }
         Server = _previous.Server;

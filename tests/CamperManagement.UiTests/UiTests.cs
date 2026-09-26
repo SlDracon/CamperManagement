@@ -40,7 +40,7 @@ public class UiTests
             boxes[0].Text = "changed-server";
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("changed-server", vm.Server);
-            Assert.True(view.GetVisualDescendants().OfType<Button>().Single().IsEnabled);
+            Assert.True(view.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Command, vm.SaveCommand)).IsEnabled);
         }
         finally { window.Close(); }
     }

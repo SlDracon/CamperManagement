@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:views="using:CamperManagement.Views"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,18 +9,22 @@
              x:Class="CamperManagement.Views.CamperView"
              x:DataType="vm:CamperViewModel">
     <Grid RowDefinitions="Auto,Auto,Auto,*">
-        <WrapPanel Grid.Row="0" Margin="0,6,0,4">
-            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding AddCamperCommand}" Margin="0,0,6,6" ToolTip.Tip="Camper hinzufügen" />
-            <Button Content="Kosten drucken" Command="{Binding PrintCommand}" Margin="0,0,6,6" />
-            <Button Content="Ablesetabelle drucken" Command="{Binding PrintAblesetabelleCommand}" Margin="0,0,6,6" />
+        <WrapPanel Classes="toolbar" Grid.Row="0" Margin="0,6,0,4">
+            <Button Content="+" Foreground="{DynamicResource PositiveBrush}" FontWeight="ExtraBold" Command="{Binding AddCamperCommand}" AutomationProperties.Name="Camper hinzufügen" ToolTip.Tip="Camper hinzufügen" />
+            <Button Content="Kosten drucken" Command="{Binding PrintCommand}" />
+            <Button Content="Ablesetabelle drucken" Command="{Binding PrintAblesetabelleCommand}" />
+            <Button Content="Bearbeiten" Command="{Binding EditSelectedCommand}" ToolTip.Tip="Auswahl bearbeiten (Enter oder F2)" />
             <Button Content="Neu laden" Command="{Binding LoadDataCommand}" Margin="10,0,0,6" />
         </WrapPanel>
-        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Foreground="DarkRed" TextWrapping="Wrap"
+        <StackPanel Grid.Row="1">
+        <views:OperationStatus />
+        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap"
                    IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"
                    Margin="0,0,0,8" />
-        <TextBox Grid.Row="2" Watermark="Suche..." Text="{Binding CamperSearchQuery, Mode=TwoWay}" Margin="0,0,0,6" />
+        </StackPanel>
+        <TextBox Grid.Row="2" AutomationProperties.Name="Camper suchen" Watermark="Suche..." Text="{Binding CamperSearchQuery, Mode=TwoWay}" Margin="0,0,0,6" />
 
-        <DataGrid Grid.Row="3" ItemsSource="{Binding FilteredCamperList}"
+        <DataGrid Classes="records" AutomationProperties.Name="Camper" SelectedItem="{Binding SelectedCamper, Mode=TwoWay}" Grid.Row="3" ItemsSource="{Binding FilteredCamperList}"
                   AutoGenerateColumns="False"
                   CanUserSortColumns="True"
                   CanUserResizeColumns="True"
@@ -28,8 +33,11 @@
                   SelectionMode="Single"
                   DoubleTapped="OnCamperDoubleTapped"
                   GridLinesVisibility="All"
-                  Focusable="False"
-                  BorderThickness="1" BorderBrush="Gray">
+>
+            <DataGrid.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding EditSelectedCommand}" />
+                <KeyBinding Gesture="F2" Command="{Binding EditSelectedCommand}" />
+            </DataGrid.KeyBindings>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Platznr" Binding="{Binding Platznr}" />
                 <DataGridTextColumn Header="Anrede" Binding="{Binding Anrede}" />
