@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:CamperManagement.ViewModels"
@@ -12,19 +13,20 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
       <vm:RechnungenViewModel />
     </Design.DataContext>
-    <StackPanel>
-        <!-- Buttons oben -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,0,10">
-            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding OpenAddRechnungCommand}" Margin="0,0,5,0" />
-            <Button Content="Tabelle drucken" Command="{Binding PrintTabelleCommand}" Margin="0,0,5,0" />
-            <Button Content="Rechnungen drucken" Command="{Binding PrintRechnungCommand}" Margin="0,0,5,0" />
-            <Button Content="Rechnungen erstellen" Command="{Binding CreateRechnungenCommand}" Margin="0,0,5,0" />
-            <TextBlock Text="{Binding StatusMessage}" Margin="0,5,0,0" />
-        </StackPanel>
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <WrapPanel Grid.Row="0" Margin="0,6,0,4">
+            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding OpenAddRechnungCommand}" Margin="0,0,6,6" ToolTip.Tip="Rechnung hinzufügen" />
+            <Button Content="Tabelle drucken" Command="{Binding PrintTabelleCommand}" Margin="0,0,6,6" />
+            <Button Content="Rechnungen drucken" Command="{Binding PrintRechnungCommand}" Margin="0,0,6,6" />
+            <Button Content="Rechnungen erstellen" Command="{Binding CreateRechnungenCommand}" Margin="0,0,6,6" />
+            <Button Content="Neu laden" Command="{Binding LoadDataCommand}" Margin="10,0,0,6" />
+        </WrapPanel>
+        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"
+                   Margin="0,0,0,8" />
+        <TextBox Grid.Row="2" Watermark="Suche..." Text="{Binding RechnungSearchQuery, Mode=TwoWay}" Margin="0,0,0,6" />
 
-        <TextBox Watermark="Suche..." Text="{Binding RechnungSearchQuery, Mode=TwoWay}" />
-
-        <DataGrid ItemsSource="{Binding FilteredRechnungenList}"
+        <DataGrid Grid.Row="3" ItemsSource="{Binding FilteredRechnungenList}"
                   AutoGenerateColumns="False"
                   CanUserSortColumns="True"
                   CanUserResizeColumns="True"
@@ -51,5 +53,5 @@
               <DataGridTextColumn Header="Gedruckt" Binding="{Binding Gedruckt}" />
           </DataGrid.Columns>
         </DataGrid>
-    </StackPanel>
+    </Grid>
 </UserControl>

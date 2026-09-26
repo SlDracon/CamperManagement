@@ -1,0 +1,49 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:11.8.8
+        env:
+          MARIADB_ROOT_PASSWORD: isolated-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      CAMPER_TEST_DB: Server=127.0.0.1;Port=3306;User ID=root;Password=isolated-test-password;Connection Timeout=10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.112'
+      - run: dotnet test CamperManagement.Tests.sln -c Release --logger trx --collect:"XPlat Code Coverage"
+      - run: dotnet build CamperManagement.Desktop -c Debug
+      - run: dotnet publish CamperManagement.Desktop -c Release -r linux-x64 --self-contained false -o artifacts/linux
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: tests/**/TestResults/
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.112'
+      - run: dotnet workload install android
+      - name: Install Android dependencies
+        run: dotnet build CamperManagement.Android -t:InstallAndroidDependencies -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64" -p:AcceptAndroidSdkLicenses=true
+      - name: Build Android APK
+        run: dotnet build CamperManagement.Android -c Debug -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64"

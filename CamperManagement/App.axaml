@@ -16,7 +16,7 @@
         </DataTemplate>
       <!-- TabViewModel -->
         <DataTemplate DataType="{x:Type viewModels:TabViewModel}">
-            <TabControl>
+            <TabControl HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
                 <TabItem Header="Camper">
                     <ContentControl Content="{Binding CamperView}" />
                 </TabItem>
@@ -47,6 +47,9 @@
         <!-- RechnungenViewModel -> RechnungenView -->
         <DataTemplate DataType="{x:Type viewModels:RechnungenViewModel}">
             <views:RechnungenView />
+        </DataTemplate>
+    <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
+            <views:SettingsView />
         </DataTemplate>
     </Application.DataTemplates>
 </Application>

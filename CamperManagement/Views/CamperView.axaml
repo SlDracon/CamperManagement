@@ -1,22 +1,25 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:CamperManagement.ViewModels"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="450"
              x:Class="CamperManagement.Views.CamperView"
              x:DataType="vm:CamperViewModel">
-    <StackPanel>
-        <!-- Buttons oben -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,0,10">
-            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding AddCamperCommand}" Margin="0,0,5,0" />
-            <Button Content="Kosten drucken" Command="{Binding PrintCommand}" Margin="0,0,5,0" />
-            <Button Content="Ablesetabelle drucken" Command="{Binding PrintAblesetabelleCommand}" />
-        </StackPanel>
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <WrapPanel Grid.Row="0" Margin="0,6,0,4">
+            <Button Content="+" Foreground="Green" FontWeight="ExtraBold" Command="{Binding AddCamperCommand}" Margin="0,0,6,6" ToolTip.Tip="Camper hinzufügen" />
+            <Button Content="Kosten drucken" Command="{Binding PrintCommand}" Margin="0,0,6,6" />
+            <Button Content="Ablesetabelle drucken" Command="{Binding PrintAblesetabelleCommand}" Margin="0,0,6,6" />
+            <Button Content="Neu laden" Command="{Binding LoadDataCommand}" Margin="10,0,0,6" />
+        </WrapPanel>
+        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Foreground="DarkRed" TextWrapping="Wrap"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"
+                   Margin="0,0,0,8" />
+        <TextBox Grid.Row="2" Watermark="Suche..." Text="{Binding CamperSearchQuery, Mode=TwoWay}" Margin="0,0,0,6" />
 
-        <TextBox Watermark="Suche..." Text="{Binding CamperSearchQuery, Mode=TwoWay}" />
-
-        <DataGrid ItemsSource="{Binding FilteredCamperList}"
+        <DataGrid Grid.Row="3" ItemsSource="{Binding FilteredCamperList}"
                   AutoGenerateColumns="False"
                   CanUserSortColumns="True"
                   CanUserResizeColumns="True"
@@ -39,5 +42,5 @@
                 <DataGridTextColumn Header="Vertragskosten" Binding="{Binding Vertragskosten}" />
             </DataGrid.Columns>
         </DataGrid>
-    </StackPanel>
+    </Grid>
 </UserControl>

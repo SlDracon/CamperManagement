@@ -1,352 +1,133 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CamperManagement.Models;
 using CamperManagement.Services;
-using CamperManagement.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using iText.Kernel.Pdf;
-using Microsoft.Extensions.Logging;
-
 namespace CamperManagement.ViewModels;
 
-public partial class RechnungenViewModel : ObservableObject
+public partial class RechnungenViewModel : ViewModelBase
 {
-    private readonly MainViewModel _mainViewModel;
-    private readonly DatabaseService _dbService;
-    private TopLevel? _toplevel;
-
-    [ObservableProperty] private ObservableCollection<RechnungDisplayModel> filteredRechnungenList = new();
-
+    private readonly MainViewModel _main; private int _loadVersion, _exportVersion;
     [ObservableProperty] private ObservableCollection<RechnungDisplayModel> rechnungenList = new();
-
-    [ObservableProperty] private string rechnungSearchQuery = string.Empty;
-
+    [ObservableProperty] private ObservableCollection<RechnungDisplayModel> filteredRechnungenList = new();
     [ObservableProperty] private ObservableCollection<RechnungDisplayModel> selectedRechnungen = new();
-
-    [ObservableProperty] private string? statusMessage;
-
-    public RechnungenViewModel(MainViewModel mainViewModel)
+    [ObservableProperty] private string rechnungSearchQuery = "";
+    public IAsyncRelayCommand LoadDataCommand
     {
-        _mainViewModel = mainViewModel;
-        _dbService = new DatabaseService();
-        LoadDataCommand = new AsyncRelayCommand(LoadDataAsync);
-        EditRechnungCommand = new RelayCommand<RechnungDisplayModel>(OpenEditRechnungDialog!);
-        OpenAddRechnungCommand = new RelayCommand(OpenAddRechnungDialog);
-        PrintRechnungCommand = new AsyncRelayCommand(
-            PrintRechnungAsync,
-            () => SelectedRechnungen.Any()
-        );
-        CreateRechnungenCommand = new AsyncRelayCommand(
-            CreateRechnungenAsync,
-            () => SelectedRechnungen.Any()
-        );
-
-        // Beobachte Änderungen an der Auswahl
-        SelectedRechnungen.CollectionChanged += (_, _) =>
-        {
-            PrintRechnungCommand.NotifyCanExecuteChanged();
-            CreateRechnungenCommand.NotifyCanExecuteChanged();
-        };
-        PrintTabelleCommand = new AsyncRelayCommand(PrintTabelleAsync);
-
-        // Initialisiere die gefilterte Liste
-        FilteredRechnungenList = new ObservableCollection<RechnungDisplayModel>();
-
-        // Lade die Daten
-        _ = LoadDataAsync();
+        get;
     }
-
-    public IAsyncRelayCommand LoadDataCommand { get; }
-    public IRelayCommand OpenAddRechnungCommand { get; }
-    public IRelayCommand PrintRechnungCommand { get; }
-    public IRelayCommand CreateRechnungenCommand { get; }
-    public IRelayCommand PrintTabelleCommand { get; }
-    public IRelayCommand<RechnungDisplayModel> EditRechnungCommand { get; }
-
+    public IRelayCommand OpenAddRechnungCommand
+    {
+        get;
+    }
+    public IRelayCommand<RechnungDisplayModel> EditRechnungCommand
+    {
+        get;
+    }
+    public IAsyncRelayCommand PrintRechnungCommand
+    {
+        get;
+    }
+    public IAsyncRelayCommand CreateRechnungenCommand
+    {
+        get;
+    }
+    public IAsyncRelayCommand PrintTabelleCommand
+    {
+        get;
+    }
+    public RechnungenViewModel(MainViewModel main)
+    {
+        _main = main;
+        LoadDataCommand = new AsyncRelayCommand(LoadDataAsync);
+        OpenAddRechnungCommand = new RelayCommand(() => _main.NavigateToCommand.Execute(new AddRechnungViewModel(_main, _main.Database) { OnSavedAsync = LoadDataAsync }));
+        EditRechnungCommand = new RelayCommand<RechnungDisplayModel>(r => { if (r != null) _main.NavigateToCommand.Execute(new EditRechnungViewModel(_main, _main.Database, r) { OnSavedAsync = LoadDataAsync }); });
+        PrintRechnungCommand = new AsyncRelayCommand(() => ExportAsync(false), CanExport);
+        CreateRechnungenCommand = new AsyncRelayCommand(() => ExportAsync(true), CanExport);
+        PrintTabelleCommand = new AsyncRelayCommand(() => RunAsync(async () => { var rows = FilteredRechnungenList.Select(r => r.Snapshot()).ToList(); if (rows.Count == 0) return; using var file = await _main.Pdf.TableAsync(rows); if (file != null && !await _main.Pdf.OpenAsync(file)) StatusMessage = "PDF gespeichert; Viewer nicht verfügbar."; }), () => !IsBusy);
+        SelectedRechnungen.CollectionChanged += SelectionChanged;
+        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(IsBusy)) NotifyExport(); };
+    }
+    partial void OnSelectedRechnungenChanging(ObservableCollection<RechnungDisplayModel> value)
+    {
+        if (selectedRechnungen != null)
+            selectedRechnungen.CollectionChanged -= SelectionChanged;
+    }
+    partial void OnSelectedRechnungenChanged(ObservableCollection<RechnungDisplayModel> value)
+    {
+        if (value != null)
+            value.CollectionChanged += SelectionChanged;
+        NotifyExport();
+    }
+    private void SelectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => NotifyExport();
+    private bool CanExport() => !IsBusy && SelectedRechnungen?.Count > 0;
+    private void NotifyExport()
+    {
+        PrintRechnungCommand?.NotifyCanExecuteChanged();
+        CreateRechnungenCommand?.NotifyCanExecuteChanged();
+        PrintTabelleCommand?.NotifyCanExecuteChanged();
+    }
+    public override Task InitializeAsync() => LoadDataAsync();
     public async Task LoadDataAsync()
     {
-        RechnungenList.Clear();
-        var rechnungen = await _dbService.GetRechnungenAsync();
-        foreach (var rechnung in rechnungen) RechnungenList.Add(rechnung);
-
-        // Initiale Filterung
-        FilterRechnungenList();
-    }
-
-    partial void OnRechnungSearchQueryChanged(string value)
-    {
-        FilterRechnungenList();
-    }
-
-    private void FilterRechnungenList()
-    {
-        if (string.IsNullOrWhiteSpace(RechnungSearchQuery))
-        {
-            FilteredRechnungenList = new ObservableCollection<RechnungDisplayModel>(RechnungenList);
-        }
-        else
-        {
-            var searchTerms = ParseSearchQuery(RechnungSearchQuery);
-
-            var filtered = RechnungenList.Where(rechnung =>
-                searchTerms.All(term =>
-                    rechnung is { Platznr: not null, Art: not null, Gedruckt: not null } && (rechnung.Id.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Platznr.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Alt.ToString(CultureInfo.CurrentCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Neu.ToString(CultureInfo.CurrentCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Verbrauch.ToString(CultureInfo.CurrentCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Faktor.ToString(CultureInfo.CurrentCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Betrag.ToString(CultureInfo.CurrentCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Jahr.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Art.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        rechnung.Gedruckt.Contains(term, StringComparison.OrdinalIgnoreCase))
-                )
-            );
-
-            FilteredRechnungenList = new ObservableCollection<RechnungDisplayModel>(filtered);
-        }
-    }
-
-    private IEnumerable<string> ParseSearchQuery(string query)
-    {
-        var terms = new List<string>();
-        var inQuotes = false;
-        var currentTerm = string.Empty;
-
-        foreach (var c in query)
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                if (inQuotes || string.IsNullOrEmpty(currentTerm)) continue;
-                terms.Add(currentTerm);
-                currentTerm = string.Empty;
-            }
-            else if (char.IsWhiteSpace(c) && !inQuotes)
-            {
-                if (string.IsNullOrEmpty(currentTerm)) continue;
-                terms.Add(currentTerm);
-                currentTerm = string.Empty;
-            }
-            else
-            {
-                currentTerm += c;
-            }
-
-        if (!string.IsNullOrEmpty(currentTerm)) terms.Add(currentTerm);
-
-        return terms;
-    }
-
-    private void OpenAddRechnungDialog()
-    {
-        _mainViewModel.NavigateToCommand.Execute(new AddRechnungViewModel(_mainViewModel, new DatabaseService())
-        {
-            // Füge die neue Rechnung direkt zur Liste hinzu
-            OnRechnungAdded = () => { _ = LoadDataAsync(); }
-        });
-    }
-
-    private async Task PrintTabelleAsync()
-    {
-        // Hole die Daten aus der gefilterten Liste
-        var filteredRechnungen = FilteredRechnungenList;
-
-        if (filteredRechnungen.Count == 0)
-            // Keine Daten verfügbar
-            return;
-
-
-        switch (Avalonia.Application.Current?.ApplicationLifetime)
-        {
-            case IClassicDesktopStyleApplicationLifetime desktop:
-                // Desktop: Hauptfenster verwenden
-                _toplevel = desktop.MainWindow;
-                break;
-            case ISingleViewApplicationLifetime singleViewPlatform:
-            {
-                // Android: Hauptansicht verwenden
-                var mainView = singleViewPlatform.MainView;
-
-                if (mainView != null)
-                {
-                    // TopLevel aus der Hauptansicht extrahieren
-                    _toplevel = TopLevel.GetTopLevel(mainView);
-                }
-                else
-                {
-                    Console.WriteLine("MainView konnte nicht gefunden werden.");
-                }
-
-                break;
-            }
-            default:
-                Console.WriteLine("Unbekannte Plattform oder ApplicationLifetime.");
-                break;
-        }
-
-        // Erstelle die PDF
-        var pdfPath = await PdfService.GenerateTabellePdfAsync(_toplevel, filteredRechnungen);
-
-        // Öffne die PDF
-        if (_toplevel != null) await PdfService.OpenPdfAsync(pdfPath, _toplevel);
-    }
-
-    private async Task PrintRechnungAsync()
-    {
-        if (SelectedRechnungen == null || !SelectedRechnungen.Any())
-            return;
-
+        var version = ++_loadVersion;
         try
         {
-            StatusMessage = "Rechnungen werden generiert...";
-
-            switch (Avalonia.Application.Current?.ApplicationLifetime)
-            {
-                case IClassicDesktopStyleApplicationLifetime desktop:
-                    // Desktop: Hauptfenster verwenden
-                    _toplevel = desktop.MainWindow;
-                    break;
-                case ISingleViewApplicationLifetime singleViewPlatform:
-                {
-                    // Android: Hauptansicht verwenden
-                    var mainView = singleViewPlatform.MainView;
-
-                    if (mainView != null)
-                    {
-                        // TopLevel aus der Hauptansicht extrahieren
-                        _toplevel = TopLevel.GetTopLevel(mainView);
-                    }
-                    else
-                    {
-                        Console.WriteLine("MainView konnte nicht gefunden werden.");
-                    }
-
-                    break;
-                }
-                default:
-                    Console.WriteLine("Unbekannte Plattform oder ApplicationLifetime.");
-                    break;
-            }
-
-            // Starte den Prozess in einem separaten Thread
-            var pdfPath = await Task.Run(async () =>
-            {
-                // Übergib die Rechnungen an den PdfService
-                return await PdfService.GenerateAndMergeRechnungenAsync(
-                    _toplevel,
-                    SelectedRechnungen,
-                    status => StatusMessage = status // Aktualisiere Statusnachrichten
-                );
-            });
-
-            // Markiere die Rechnungen als gedruckt in der Datenbank
-            foreach (var rechnung in SelectedRechnungen)
-            {
-                await _dbService.MarkRechnungAsPrintedAsync(rechnung.Id);
-            }
-
-            StatusMessage = "PDF erfolgreich erstellt.";
-            await PdfService.OpenPdfAsync(pdfPath, _toplevel);
-
-            StatusMessage = "";
-
-            // Aktualisiere die Rechnungsliste
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Fehler beim Drucken der Rechnungen";
-            Console.WriteLine(ex);
-        }
-    }
-
-    private async Task CreateRechnungenAsync()
-    {
-        if (SelectedRechnungen == null || !SelectedRechnungen.Any())
-            return;
-
-        try
-        {
-            StatusMessage = "Rechnungen werden erstellt...";
-
-            switch (Avalonia.Application.Current?.ApplicationLifetime)
-            {
-                case IClassicDesktopStyleApplicationLifetime desktop:
-                    _toplevel = desktop.MainWindow;
-                    break;
-                case ISingleViewApplicationLifetime singleViewPlatform:
-                {
-                    var mainView = singleViewPlatform.MainView;
-
-                    if (mainView != null)
-                    {
-                        _toplevel = TopLevel.GetTopLevel(mainView);
-                    }
-                    else
-                    {
-                        Console.WriteLine("MainView konnte nicht gefunden werden.");
-                    }
-
-                    break;
-                }
-                default:
-                    Console.WriteLine("Unbekannte Plattform oder ApplicationLifetime.");
-                    break;
-            }
-
-            var selectedRechnungenSnapshot = SelectedRechnungen.ToList();
-
-            var success = await PdfService.GenerateRechnungenByPlatzAsync(
-                _toplevel,
-                selectedRechnungenSnapshot,
-                status => StatusMessage = status
-            );
-
-            if (!success)
-            {
-                StatusMessage = "Erstellung abgebrochen.";
+            var rows = await _main.Database.GetRechnungenAsync();
+            if (version != _loadVersion)
                 return;
-            }
-
-            foreach (var rechnung in selectedRechnungenSnapshot)
-            {
-                await _dbService.MarkRechnungAsPrintedAsync(rechnung.Id);
-            }
-
-            StatusMessage = "Rechnungen wurden erstellt.";
-
-            await LoadDataAsync();
+            RechnungenList = new(rows);
+            SelectedRechnungen.Clear();
+            Filter();
+            StatusMessage = null;
         }
-        catch (Exception ex)
-        {
-            StatusMessage = "Fehler beim Erstellen der Rechnungen";
-            Console.WriteLine(ex);
-        }
-        finally
-        {
-            await Task.Delay(1500);
-            StatusMessage = string.Empty;
-        }
+        catch (Exception) { if (version == _loadVersion) StatusMessage = "Rechnungen konnten nicht geladen werden. Bitte erneut laden."; }
     }
-
-    private void OpenEditRechnungDialog(RechnungDisplayModel rechnung)
+    partial void OnRechnungSearchQueryChanged(string value) => Filter();
+    private void Filter() => FilteredRechnungenList = new(RechnungenList.Where(r =>
     {
-        if (rechnung == null) return;
-
-        _mainViewModel.NavigateToCommand.Execute(new EditRechnungViewModel(_mainViewModel, new DatabaseService(), rechnung)
+        var de = CultureInfo.GetCultureInfo("de-DE");
+        return SearchQuery.Matches(RechnungSearchQuery, r.Id.ToString(), r.Platznr, r.Art, r.Gedruckt, r.Jahr.ToString(), r.Alt.ToString(de), r.Neu.ToString(de), r.Verbrauch.ToString(de), r.Faktor.ToString(de), r.Betrag.ToString(de), r.Alt.ToString(CultureInfo.InvariantCulture), r.Neu.ToString(CultureInfo.InvariantCulture), r.Verbrauch.ToString(CultureInfo.InvariantCulture), r.Faktor.ToString(CultureInfo.InvariantCulture), r.Betrag.ToString(CultureInfo.InvariantCulture));
+    }));
+    private async Task ExportAsync(bool grouped)
+    {
+        if (!CanExport())
+            return;
+        var snapshot = SelectedRechnungen.Select(r => r.Snapshot()).ToList();
+        await RunAsync(async () =>
         {
-            // Füge die neue Rechnung direkt zur Liste hinzu
-            OnRechnungChanged = () => { _ = LoadDataAsync(); }
+            if (snapshot.Any(r => !r.RecipientResolved))
+                throw new InvalidOperationException("Bei mindestens einer Rechnung muss zuerst der historische Empfänger zugeordnet werden.");
+            var version = ++_exportVersion;
+            var progress = new Progress<string?>(text => { if (version == _exportVersion) StatusMessage = text; });
+            IStorageFile? file = null;
+            bool saved;
+            try
+            {
+                saved = grouped ? await _main.Pdf.ByPlatzAsync(snapshot, progress) : (file = await _main.Pdf.InvoicesAsync(snapshot, progress)) != null;
+                ++_exportVersion;
+                if (!saved)
+                {
+                    StatusMessage = "Export abgebrochen. Druckstatus unverändert.";
+                    return;
+                }
+                try
+                {
+                    await _main.Database.MarkRechnungenAsPrintedAsync(snapshot.Select(r => r.Id).ToArray());
+                }
+                catch (Exception) { StatusMessage = "PDFs gespeichert, aber der Druckstatus konnte nicht gespeichert werden. Bitte erneut versuchen."; return; }
+                await LoadDataAsync();
+                StatusMessage = "Alle ausgewählten Rechnungen wurden gespeichert und als gedruckt markiert.";
+                if (file != null && !await _main.Pdf.OpenAsync(file))
+                    StatusMessage = "PDF gespeichert und als gedruckt markiert; Viewer nicht verfügbar.";
+            }
+            finally { ++_exportVersion; file?.Dispose(); }
         });
     }
 }

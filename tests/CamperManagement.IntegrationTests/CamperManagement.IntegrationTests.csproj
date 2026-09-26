@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><TargetFramework>net10.0</TargetFramework><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+<ItemGroup><PackageReference Include="Microsoft.NET.Test.Sdk" /><PackageReference Include="xunit" /><PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" /><PackageReference Include="coverlet.collector" PrivateAssets="all" /></ItemGroup>
+<ItemGroup><ProjectReference Include="../../CamperManagement/CamperManagement.csproj" /><Compile Include="../Shared/*.cs" Link="Shared/%(Filename)%(Extension)" /><Using Include="Xunit" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Fixtures/schema.sql" /></ItemGroup></Project>

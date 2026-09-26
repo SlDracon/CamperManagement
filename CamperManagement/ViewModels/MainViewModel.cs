@@ -1,65 +1,95 @@
-﻿using CamperManagement.Models;
-using CamperManagement.Views;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using CamperManagement.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.Generic;
-
 namespace CamperManagement.ViewModels;
 
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ViewModelBase
 {
     private readonly Stack<object> _navigationStack = new();
-
-    [ObservableProperty]
-    private object currentView;
-
-    [ObservableProperty]
-    private bool canNavigateBack;
-
-    public IRelayCommand NavigateBackCommand { get; }
-    public IRelayCommand<object> NavigateToCommand { get; }
-
-    public MainViewModel()
+    public IDatabaseService Database
     {
-        // Standard-Tabs
-        var camperView = new CamperViewModel(this);
-        var rechnungenView = new RechnungenViewModel(this);
-
-        CurrentView = new TabViewModel(camperView, rechnungenView);
-        CanNavigateBack = false;
-
-        NavigateBackCommand = new RelayCommand(NavigateBack, () => CanNavigateBack);
-        NavigateToCommand = new RelayCommand<object>(NavigateTo);
+        get;
     }
-
-    private void NavigateTo(object? view)
+    public IPdfExporter Pdf
     {
-        if (CurrentView != null)
+        get;
+    }
+    public TimeProvider Clock
+    {
+        get;
+    }
+    [ObservableProperty] private object currentView;
+    [ObservableProperty] private bool canNavigateBack;
+    public Task NavigationTask { get; private set; } = Task.CompletedTask;
+    public IRelayCommand NavigateBackCommand
+    {
+        get;
+    }
+    public IRelayCommand<object> NavigateToCommand
+    {
+        get;
+    }
+    public IRelayCommand SettingsCommand
+    {
+        get;
+    }
+    public MainViewModel() : this(new DatabaseService()) { }
+    public MainViewModel(IDatabaseService database, IPdfExporter? pdf = null, TimeProvider? clock = null)
+    {
+        Database = database;
+        Pdf = pdf ?? new PdfExporter();
+        Clock = clock ?? TimeProvider.System;
+        currentView = new TabViewModel(new CamperViewModel(this), new RechnungenViewModel(this));
+        NavigateBackCommand = new RelayCommand(Back, () => CanNavigateBack);
+        NavigateToCommand = new RelayCommand<object>(Navigate);
+        SettingsCommand = new RelayCommand(() => Navigate(new SettingsViewModel(Database)));
+    }
+    public override Task InitializeAsync() => RunAsync(async () => { if (CurrentView is TabViewModel tabs) { await ((ViewModelBase)tabs.CamperView).InitializeAsync(); await ((ViewModelBase)tabs.RechnungenView).InitializeAsync(); } });
+    private void Navigate(object? view)
+    {
+        if (IsNavigationBusy())
+            return;
+        if (view == null)
         {
-            _navigationStack.Push(CurrentView);
+            Back();
+            return;
         }
-
-        if (view != null)
-        {
-            CurrentView = view;
-            CanNavigateBack = true;
-        }
-        else if (_navigationStack.Count > 0)
-        {
-            CurrentView = _navigationStack.Pop();
-            CanNavigateBack = _navigationStack.Count > 0;
-        }
-
+        if (ReferenceEquals(view, CurrentView))
+            return;
+        if (CurrentView is ViewModelBase previous)
+            previous.Deactivate();
+        _navigationStack.Push(CurrentView);
+        CurrentView = view;
+        UpdateNavigation();
+        NavigationTask = view is ViewModelBase vm ? vm.InitializeAsync() : Task.CompletedTask;
+    }
+    private bool IsNavigationBusy() => CurrentView is ViewModelBase { IsBusy: true } || CurrentView is TabViewModel tabs && (((ViewModelBase)tabs.CamperView).IsBusy || ((ViewModelBase)tabs.RechnungenView).IsBusy);
+    public void ReturnFrom(ViewModelBase origin)
+    {
+        if (ReferenceEquals(CurrentView, origin))
+            BackCore();
+    }
+    private void Back()
+    {
+        if (!IsNavigationBusy())
+            BackCore();
+    }
+    private void BackCore()
+    {
+        if (_navigationStack.Count == 0)
+            return;
+        if (CurrentView is ViewModelBase previous)
+            previous.Deactivate();
+        CurrentView = _navigationStack.Pop();
+        UpdateNavigation();
+        NavigationTask = CurrentView is ViewModelBase resumed ? resumed.ResumeAsync() : Task.CompletedTask;
+    }
+    private void UpdateNavigation()
+    {
+        CanNavigateBack = _navigationStack.Count > 0;
         NavigateBackCommand.NotifyCanExecuteChanged();
-    }
-
-    private void NavigateBack()
-    {
-        if (_navigationStack.Count > 0)
-        {
-            CurrentView = _navigationStack.Pop();
-            CanNavigateBack = _navigationStack.Count > 0;
-            NavigateBackCommand.NotifyCanExecuteChanged();
-        }
     }
 }

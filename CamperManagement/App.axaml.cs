@@ -11,6 +11,10 @@ namespace CamperManagement;
 
 public partial class App : Application
 {
+    public static bool IsSmokeTest
+    {
+        get; set;
+    }
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);

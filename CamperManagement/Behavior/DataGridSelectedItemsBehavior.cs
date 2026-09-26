@@ -1,56 +1,75 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Specialized;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Xaml.Interactivity;
+namespace CamperManagement.Behavior;
 
-namespace CamperManagement.Behavior
+public class DataGridSelectedItemsBehavior : Behavior<DataGrid>
 {
-    public class DataGridSelectedItemsBehavior : Behavior<DataGrid>
+    public static readonly StyledProperty<IList?> SelectedItemsProperty = AvaloniaProperty.Register<DataGridSelectedItemsBehavior, IList?>(nameof(SelectedItems));
+    public IList? SelectedItems
     {
-        public static readonly StyledProperty<IList?> SelectedItemsProperty =
-            AvaloniaProperty.Register<DataGridSelectedItemsBehavior, IList?>(nameof(SelectedItems));
-
-        public IList? SelectedItems
+        get => GetValue(SelectedItemsProperty); set => SetValue(SelectedItemsProperty, value);
+    }
+    private bool _updating;
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == SelectedItemsProperty)
         {
-            get => GetValue(SelectedItemsProperty);
-            set => SetValue(SelectedItemsProperty, value);
+            if (change.OldValue is INotifyCollectionChanged old)
+                old.CollectionChanged -= OnListChanged;
+            if (AssociatedObject != null && change.NewValue is INotifyCollectionChanged value)
+                value.CollectionChanged += OnListChanged;
+            SyncGrid();
         }
-
-        protected override void OnAttached()
+    }
+    protected override void OnAttached()
+    {
+        base.OnAttached();
+        AssociatedObject!.SelectionChanged += OnSelectionChanged;
+        if (SelectedItems is INotifyCollectionChanged list)
+            list.CollectionChanged += OnListChanged;
+        SyncGrid();
+    }
+    protected override void OnDetaching()
+    {
+        AssociatedObject!.SelectionChanged -= OnSelectionChanged;
+        if (SelectedItems is INotifyCollectionChanged list)
+            list.CollectionChanged -= OnListChanged;
+        base.OnDetaching();
+    }
+    private void OnListChanged(object? sender, NotifyCollectionChangedEventArgs e) => SyncGrid();
+    private void SyncGrid()
+    {
+        if (_updating || AssociatedObject == null)
+            return;
+        _updating = true;
+        try
         {
-            base.OnAttached();
-
-            if (AssociatedObject != null)
-            {
-                AssociatedObject.SelectionChanged += OnSelectionChanged;
-            }
+            var values = SelectedItems?.Cast<object>().ToArray() ?? [];
+            AssociatedObject.SelectedItems.Clear();
+            foreach (var value in values)
+                if (!AssociatedObject.SelectedItems.Contains(value))
+                    AssociatedObject.SelectedItems.Add(value);
         }
-
-        protected override void OnDetaching()
+        finally { _updating = false; }
+    }
+    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_updating || SelectedItems == null)
+            return;
+        _updating = true;
+        try
         {
-            base.OnDetaching();
-
-            if (AssociatedObject != null)
-            {
-                AssociatedObject.SelectionChanged -= OnSelectionChanged;
-            }
+            foreach (var value in e.RemovedItems)
+                SelectedItems.Remove(value);
+            foreach (var value in e.AddedItems)
+                if (!SelectedItems.Contains(value))
+                    SelectedItems.Add(value);
         }
-
-        private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
-        {
-            if (SelectedItems is IList targetList)
-            {
-                foreach (var item in e.AddedItems)
-                {
-                    targetList.Add(item);
-                }
-
-                foreach (var item in e.RemovedItems)
-                {
-                    targetList.Remove(item);
-                }
-            }
-        }
+        finally { _updating = false; }
     }
 }

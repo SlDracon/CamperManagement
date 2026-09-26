@@ -6,22 +6,35 @@
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="450"
              x:Class="CamperManagement.Views.MainView"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <Style Selector=":is(UserControl).compact TextBlock.settings-label">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+    </UserControl.Styles>
     <Design.DataContext>
         <vm:MainViewModel />
     </Design.DataContext>
 
-  <DockPanel>
-      <!-- Zurück-Button -->
-      <Button Content="←"
-              Command="{Binding NavigateBackCommand}"
-              IsVisible="{Binding CanNavigateBack}"
-              DockPanel.Dock="Top"
-              HorizontalAlignment="Left"
-              Margin="10" />
+    <Grid RowDefinitions="Auto,*">
+        <Button Grid.Row="0" Content="← Zurück"
+                Command="{Binding NavigateBackCommand}"
+                IsVisible="{Binding CanNavigateBack}"
+                HorizontalAlignment="Left" Margin="12,10,12,0" />
 
-      <!-- Dynamischer Inhalt -->
-      <ScrollViewer>
-          <ContentControl Content="{Binding CurrentView}" />
-      </ScrollViewer>
-  </DockPanel>
+        <ContentControl Grid.Row="1" Content="{Binding CurrentView}"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch" />
+        <!-- Auf der Übersichtsseite neben den Registerkarten, ohne zusätzliche Kopfzeile. -->
+        <Button Grid.Row="1" ToolTip.Tip="Einstellungen" AutomationProperties.Name="Einstellungen"
+                Command="{Binding SettingsCommand}"
+                IsVisible="{Binding !CanNavigateBack}"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="8,10,12,0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Width="16" Height="16"
+                          Data="M10,1 L14,1 15,4 17,5 20,4 22,8 20,10 20,14 22,16 20,20 17,19 15,20 14,23 10,23 9,20 7,19 4,20 2,16 4,14 4,10 2,8 4,4 7,5 9,4 Z M12,8 A4,4 0 1 0 12,16 A4,4 0 1 0 12,8 Z" />
+                <TextBlock Classes="settings-label" Text="Einstellungen" VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+    </Grid>
 </UserControl>
