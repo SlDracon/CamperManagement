@@ -1,5 +1,7 @@
 # Datenbankumstellung
 
+[Zur Dokumentationsübersicht](../README.md)
+
 Die Anwendung kann `CAMPER_DB_CONNECTION` aus der Umgebung verwenden. Der bisherige lokale Standard bleibt für die vorhandene Installation erhalten. Tests und Migrationstool verwenden ausschließlich explizite Verbindungen.
 
 Vor der ersten Nutzung der neuen Version sind die Migrationen 001 und 002 erforderlich. Zuerst alle anderen Anwendungsinstanzen schließen und eine vollständige konsistente Sicherung einschließlich Tabellen, Triggern und Routinen erstellen. Sicherungen sind vertraulich: `.local/backups/` ist von Git ausgeschlossen und sollte Modus 0700, die Dateien Modus 0600 erhalten. Die Sicherung enthält die bisherigen Tabellen; Rücksicherung nur bei gestoppter Anwendung und zunächst in eine separate Datenbank prüfen. DDL-Anweisungen sind unter MariaDB nicht gemeinsam transaktional rückgängig zu machen.
@@ -29,3 +31,39 @@ Migration 002:
 - Neue Formulare und die fortlaufende Erfassung laden aktuelle Faktoren erneut. Bereits gespeicherte Rechnungen und ihre Beträge werden durch die Migration nicht verändert.
 
 Camperwechsel sperren den betroffenen Platz und führen Deaktivierung, Person, Camper und Verknüpfung in einer Transaktion aus. Druckstatus wird erst nach vollständigem PDF-Export und dann für die ganze Auswahl in einer Transaktion gespeichert. Exportierte PDFs werden bei einem späteren Statusfehler nicht gelöscht; die Anwendung meldet beide Ergebnisse getrennt.
+
+## Sicherung und Wiederherstellung
+
+Eine vollständige Sicherung enthält neben den Daten das Tabellenschema und vorhandene Trigger beziehungsweise Routinen. Für eine konsistente Sicherung mit `--single-transaction` müssen die betroffenen Tabellen eine transaktionale Engine wie InnoDB verwenden; währenddessen keine Schemaänderungen ausführen. Die bisherigen Tabellen verwenden InnoDB.
+
+Mit einem installierten MariaDB-Client kann die Sicherung wie folgt vorbereitet werden:
+
+```bash
+umask 077
+mkdir -p .local/backups
+chmod 700 .local .local/backups
+```
+
+Die Client-Zugangsdaten lokal in `.local/mariadb-client.cnf` hinterlegen, Platzhalter ersetzen und Dateirechte auf `0600` setzen. Diese Datei wird wegen `.local/` nicht von Git erfasst. Sie ist eine separate Konfiguration für die MariaDB-CLI; die Anwendung selbst liest weiterhin `CAMPER_DB_CONNECTION`.
+
+```ini
+[client]
+host=DB_HOST
+port=DB_PORT
+user=DB_USER
+password="DB_PASSWORT"
+```
+
+Nach dem Erstellen der Datei:
+
+```bash
+chmod 600 .local/mariadb-client.cnf
+camper_backup_file=".local/backups/camper-$(date +%Y%m%d-%H%M%S).sql"
+mariadb-dump --defaults-extra-file=.local/mariadb-client.cnf \
+  --single-transaction --routines --triggers --hex-blob DB_NAME \
+  > "$camper_backup_file" && sha256sum "$camper_backup_file" > "$camper_backup_file.sha256"
+```
+
+`DB_NAME` durch den richtigen Datenbanknamen ersetzen. Der verwendete Benutzer benötigt die Rechte zum Lesen der gesicherten Daten und Objekte. Bei einem Fehler ist eine eventuell schon angelegte Datei keine verifizierte Sicherung. Exitcode, Dateigröße und Dump-Abschluss prüfen; eine Prüfsumme allein weist keine Wiederherstellbarkeit nach.
+
+Eine Wiederherstellung zunächst manuell auf einem getrennten Server beziehungsweise in einer separat vorbereiteten Datenbank erproben. Tabellen, Rechnungsempfänger, Rechnungsanzahl und Jahressummen prüfen. Eine produktive Rücksicherung benötigt ein abgestimmtes Wartungsfenster mit geschlossenen Anwendungsinstanzen und dem zur Sicherung passenden Anwendungsstand. Produktive Sicherungen nicht als Datenquelle der automatisierten Tests verwenden; diese arbeiten mit eigenen synthetischen Fixtures.

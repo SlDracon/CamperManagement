@@ -1,5 +1,7 @@
 # Automatisierte Tests
 
+[Zur Dokumentationsübersicht](../README.md)
+
 Die regulären xUnit-2-Tests sind in Rider einzeln auffindbar. `CamperManagement.Tests.sln` enthält nur die gemeinsame Anwendung und vier Testprojekte; mobile Workloads und ein Mac sind für die Tests nicht erforderlich. Das Avalonia-Headless-Paket passt zur bestehenden Avalonia-11-Version.
 
 ```bash
@@ -24,4 +26,4 @@ PDF-Tests prüfen echte PDF-Texte, Seiten, Dateihandles, Abbruch und Fehler beim
 
 Die ältere `CamperManagement.RegressionTests`-Konsolenprüfung bleibt als zusätzlicher Diagnoseaufruf erhalten. Die regulären Suiten decken ihre Fälle einzeln ab und erweitern sie.
 
-Die CI startet eine eigene MariaDB-Instanz, führt alle vier Suiten aus und baut Linux sowie Android. iOS und echte Android-Geräte werden dadurch nicht als geprüft ausgegeben. Details: `docs/test-coverage.md` und `docs/platform-checks.md`.
+Die CI startet eine eigene MariaDB-Instanz, führt alle vier Suiten aus und baut Linux sowie Android. iOS und echte Android-Geräte werden dadurch nicht als geprüft ausgegeben. Details: [Testabdeckung](../docs/test-coverage.md) und [Plattformprüfungen](../docs/platform-checks.md).

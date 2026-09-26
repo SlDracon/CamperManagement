@@ -1,5 +1,7 @@
 # Umsetzung des Testplans
 
+[Zur Dokumentationsübersicht](../README.md)
+
 Die korrigierte Einstellungsvorgabe gilt ohne Jahresbindung: neue Rechnungen verwenden ab dem Speichern die aktuellen Faktoren. Die 120 Szenarien des Plans sind fachliche Gruppen, keine Behauptung über 120 einzelne Testmethoden. Parametrisierte Tests führen mehrere Daten-/Fehlervarianten aus. Die vier regulären Testprojekte werden in der Hauptsolution und in der unabhängigen Test-Solution aufgeführt. Die Tests laufen ohne Produktivzugriff.
 
 Nicht jede Plattformprüfung ist auf diesem Linux-Rechner ausführbar. Native Dateipicker/Viewer und reale Android-Geräte bleiben zusätzliche Freigabeschritte. iOS benötigt einen Mac; Browser-Funktionalität benötigt eine Backend-API. Diese Schritte werden nicht als bestandene automatisierte Tests gezählt.

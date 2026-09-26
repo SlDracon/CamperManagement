@@ -1,5 +1,7 @@
 # Plattformprüfungen
 
+[Zur Dokumentationsübersicht](../README.md)
+
 | Ziel | Automatisch prüfbar | Zusätzliche Freigabe |
 |---|---|---|
 | Linux | Debug/Release, linux-x64-Publish, Unit/PDF/MariaDB/Headless | Native Dateidialoge unter den eingesetzten Wayland-/X11-Portalen und PDF-Viewer prüfen. |
