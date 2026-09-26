@@ -1,0 +1,21 @@
+CamperManagement – Installation
+
+Linux x64: Archiv vollständig entpacken und CamperManagement.Desktop starten.
+Windows x64: ZIP vollständig entpacken und CamperManagement.Desktop.exe starten.
+Die .NET-Laufzeit ist enthalten. Alle Dateien im entpackten Ordner behalten.
+Linux benötigt eine grafische Sitzung und die üblichen X11/Fontconfig/ICU-Bibliotheken.
+Windows-Pakete besitzen kein Authenticode-Zertifikat.
+
+Android: APK installieren; die Installation aus dieser Quelle muss auf dem Gerät
+zugelassen sein. Updates benötigen denselben Signierschlüssel. Alte Debug-Versionen
+müssen gegebenenfalls zuvor deinstalliert werden. Geräteprüfung und Behebung der
+bekannten Skia-Warnungen für 16-KB-Speicherseiten stehen noch aus.
+
+Beim ersten Start Server, Port, Datenbank, Benutzer und Passwort eintragen.
+Die Datenbank muss im Netzwerk erreichbar sein und die Migrationen 001/002 enthalten.
+Die Anwendung richtet keine leere Datenbank ein und führt keine Migrationen aus.
+Die Zugangsdaten werden nur im privaten Benutzerverzeichnis dieses Geräts gespeichert.
+Einstellungen > Datenbankverbindung öffnet die Einrichtung erneut.
+CAMPER_DB_CONNECTION überschreibt die gespeicherte Verbindung.
+
+Dokumentation: https://github.com/SlDracon/CamperManagement#dokumentation

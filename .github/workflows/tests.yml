@@ -1,14 +1,19 @@
 name: Build and test
+
 on:
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
+
 permissions:
   contents: read
+
 jobs:
   tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     services:
       mariadb:
         image: mariadb:11.8.8
@@ -23,27 +28,58 @@ jobs:
       CAMPER_TEST_DB: Server=127.0.0.1;Port=3306;User ID=root;Password=isolated-test-password;Connection Timeout=10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.112'
-      - run: dotnet test CamperManagement.Tests.sln -c Release --logger trx --collect:"XPlat Code Coverage"
-      - run: dotnet build CamperManagement.Desktop -c Debug
-      - run: dotnet publish CamperManagement.Desktop -c Release -r linux-x64 --self-contained false -o artifacts/linux
-      - uses: actions/upload-artifact@v4
+      - name: Check release version rules
+        run: python3 -m unittest discover -s build/tests -v
+      - name: Unit, database, PDF and UI tests
+        run: dotnet test CamperManagement.Tests.sln -c Release --logger trx --collect:"XPlat Code Coverage"
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
           path: tests/**/TestResults/
-  android:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+          retention-days: 14
+
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: windows-2025
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.112'
+      - name: Build distributable desktop application
+        run: dotnet publish CamperManagement.Desktop -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishTrimmed=false -o artifacts/desktop
+      - name: Unit tests on Windows
+        if: runner.os == 'Windows'
+        run: dotnet test tests/CamperManagement.UnitTests -c Release --logger trx
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.112'
       - run: dotnet workload install android
       - name: Install Android dependencies
         run: dotnet build CamperManagement.Android -t:InstallAndroidDependencies -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64" -p:AcceptAndroidSdkLicenses=true
-      - name: Build Android APK
+      - name: Build Android APK without release credentials
         run: dotnet build CamperManagement.Android -c Debug -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64"

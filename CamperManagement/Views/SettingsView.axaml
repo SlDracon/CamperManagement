@@ -19,6 +19,7 @@
                 <Button Content="Speichern" Command="{Binding SaveCommand}" />
                 <Button Content="Neu laden" Command="{Binding LoadCommand}" />
             </StackPanel>
+            <Button Content="Datenbankverbindung …" Command="{Binding ConnectionCommand}" IsVisible="{Binding CanConfigureConnection}" Margin="0,16,0,0" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

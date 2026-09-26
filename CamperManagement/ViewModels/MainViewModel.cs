@@ -21,7 +21,10 @@ public partial class MainViewModel : ViewModelBase
     {
         get;
     }
-    [ObservableProperty] private object currentView;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOverview))]
+    private object currentView;
+    public bool IsOverview => CurrentView is TabViewModel;
     [ObservableProperty] private bool canNavigateBack;
     public Task NavigationTask { get; private set; } = Task.CompletedTask;
     public IRelayCommand NavigateBackCommand
@@ -36,7 +39,11 @@ public partial class MainViewModel : ViewModelBase
     {
         get;
     }
-    public MainViewModel() : this(new DatabaseService()) { }
+    public MainViewModel() : this(new DatabaseService())
+    {
+        if (!DatabaseConfiguration.Current.IsConfigured)
+            CurrentView = CreateConnectionView();
+    }
     public MainViewModel(IDatabaseService database, IPdfExporter? pdf = null, TimeProvider? clock = null)
     {
         Database = database;
@@ -45,9 +52,16 @@ public partial class MainViewModel : ViewModelBase
         currentView = new TabViewModel(new CamperViewModel(this), new RechnungenViewModel(this));
         NavigateBackCommand = new RelayCommand(Back, () => CanNavigateBack);
         NavigateToCommand = new RelayCommand<object>(Navigate);
-        SettingsCommand = new RelayCommand(() => Navigate(new SettingsViewModel(Database)));
+        SettingsCommand = new RelayCommand(() => Navigate(new SettingsViewModel(Database, () => Navigate(CreateConnectionView()))));
     }
     public override Task InitializeAsync() => RunAsync(async () => { if (CurrentView is TabViewModel tabs) { await ((ViewModelBase)tabs.CamperView).InitializeAsync(); await ((ViewModelBase)tabs.RechnungenView).InitializeAsync(); } });
+    private DatabaseConnectionViewModel CreateConnectionView() => new(DatabaseConfiguration.Current, async () =>
+    {
+        _navigationStack.Clear();
+        CurrentView = new TabViewModel(new CamperViewModel(this), new RechnungenViewModel(this));
+        UpdateNavigation();
+        await InitializeAsync();
+    });
     private void Navigate(object? view)
     {
         if (IsNavigationBusy())

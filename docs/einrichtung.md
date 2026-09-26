@@ -16,7 +16,11 @@ Die Anwendung verbindet sich direkt mit der Datenbank. Sie hat keine lokale Offl
 
 ## Datenbankverbindung
 
-Die Umgebungsvariable **`CAMPER_DB_CONNECTION`** überschreibt den eingebauten Verbindungsstandard der bisherigen Installation. Für andere Geräte und Umgebungen die Verbindung ausdrücklich setzen. Ist die Variable gesetzt, aber leer, wird dies als Konfigurationsfehler behandelt.
+Beim ersten Start auf einem neuen Gerät erscheint **Datenbank verbinden**. Server/IP-Adresse, Port, Datenbank, Benutzer und Passwort eingeben und **Verbindung prüfen und speichern** wählen. Geprüft werden die Verbindung und der Zugriff auf die aktuellen Standardfaktoren; das setzt das vorhandene Schema einschließlich Migration 002 voraus. Nach erfolgreicher Prüfung werden die Listen geladen. Spätere Änderungen sind unter **Einstellungen → Datenbankverbindung** möglich.
+
+Die Konfiguration liegt ausschließlich auf dem jeweiligen Gerät: unter Linux in `~/.local/share/CamperManagement/database.json` (beziehungsweise unter `XDG_DATA_HOME`), unter Windows in `%LOCALAPPDATA%/CamperManagement/database.json` und unter Android im privaten App-Datenverzeichnis. Unter Unix erhalten Verzeichnis und Datei die Rechte 0700 beziehungsweise 0600. Die Datei enthält das Passwort und ist nicht zusätzlich verschlüsselt; nicht teilen oder in Git aufnehmen. Eine Android-Deinstallation entfernt auch die lokale Konfiguration.
+
+Die Umgebungsvariable **`CAMPER_DB_CONNECTION`** hat Vorrang vor dieser Datei. Ist sie gesetzt, lässt sich die Verbindung nicht über die Oberfläche speichern. Eine leere oder ungültige Variable ist ein Konfigurationsfehler; sie wird nicht still durch die lokale Datei ersetzt. Produktive Verbindungsdaten sind nicht mehr in der Anwendung eingebaut.
 
 Aufbau eines Connection-Strings; alle großgeschriebenen Werte sind Platzhalter:
 
@@ -107,7 +111,7 @@ dotnet build CamperManagement.Android/CamperManagement.Android.csproj -c Debug \
   -p:JavaSdkDirectory="/pfad/zum/jdk-21"
 ```
 
-Der Build erzeugt ein Debug-APK unter `CamperManagement.Android/bin/Debug/net10.0-android/`. Für dessen Lauf sind zusätzlich ein Gerät oder Emulator sowie Netzwerkzugriff auf die Datenbank nötig. Das ist kein signiertes Store-Release. Die bekannten 16-KB-Warnungen und noch ausstehenden Geräteprüfungen stehen unter [Plattformprüfungen](platform-checks.md).
+Der Build erzeugt ein Debug-APK unter `CamperManagement.Android/bin/Debug/net10.0-android/`. Für dessen Lauf sind zusätzlich ein Gerät oder Emulator sowie Netzwerkzugriff auf die Datenbank nötig. Für signierte APKs und portable Desktop-Pakete steht die [GitHub-Release-Pipeline](releases.md) bereit. Die bekannten 16-KB-Warnungen und noch ausstehenden Geräteprüfungen stehen unter [Plattformprüfungen](platform-checks.md).
 
 ### iOS
 

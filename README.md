@@ -12,6 +12,7 @@ CamperManagement verwaltet Camper, Stellplatzbelegungen sowie Wasser- und Stromr
 | Schemaänderungen, Sicherung und Migrationen | [Datenbankumstellung](docs/database.md) |
 | Tests lokal und in Rider ausführen | [Testanleitung](tests/README.md) |
 | Abgedeckte Szenarien und Prüfgrenzen | [Testabdeckung](docs/test-coverage.md) |
+| GitHub Actions, Signierung und Downloads | [CI/CD und Releases](docs/releases.md) |
 | Linux, Android, iOS und Browser | [Plattformprüfungen](docs/platform-checks.md) |
 
 ## Funktionsumfang
@@ -23,6 +24,8 @@ CamperManagement verwaltet Camper, Stellplatzbelegungen sowie Wasser- und Stromr
 - Automatisierte Tests für Berechnung, Datenbank, PDF-Erzeugung und Oberfläche.
 
 ![Camperübersicht mit ausschließlich erfundenen Beispieldaten](docs/images/uebersicht.png)
+
+Fertige Pakete für Linux x64, Windows x64 und Android stehen nach einem erfolgreichen Versions-Tag unter [GitHub Releases](https://github.com/SlDracon/CamperManagement/releases) bereit.
 
 ## Schnellstart für Linux
 

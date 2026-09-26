@@ -9,9 +9,9 @@ namespace CamperManagement.Services;
 public sealed class DatabaseService : IDatabaseService
 {
     // The explicit constructor is used by all tests; it never falls back to the live server.
-    private readonly string _connectionString;
+    private readonly string? _connectionString;
     private readonly TimeProvider _clock;
-    public DatabaseService() : this(Environment.GetEnvironmentVariable("CAMPER_DB_CONNECTION") ?? LegacyConnectionString) { }
+    public DatabaseService() { _clock = TimeProvider.System; }
     public DatabaseService(string connectionString, TimeProvider? clock = null)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -21,7 +21,7 @@ public sealed class DatabaseService : IDatabaseService
     }
     public async Task<MySqlConnection> OpenConnectionAsync()
     {
-        var c = new MySqlConnection(_connectionString);
+        var c = new MySqlConnection(_connectionString ?? DatabaseConfiguration.Validate(DatabaseConfiguration.Current.Load()));
         try
         {
             await c.OpenAsync();
@@ -205,5 +205,4 @@ public sealed class DatabaseService : IDatabaseService
         if (await cmd.ExecuteNonQueryAsync() != 1)
             throw new InvalidOperationException("Die Faktoren wurden auf einem anderen Gerät geändert. Bitte neu laden.");
     }
-    private const string LegacyConnectionString = "Server=192.168.50.51;Port=15000;User=camper;Password=GlJzTYAWaa5FWuNH;Database=camper;AllowZeroDateTime=True;ConvertZeroDateTime=True;";
 }

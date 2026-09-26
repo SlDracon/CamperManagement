@@ -455,3 +455,11 @@ $RECYCLE.BIN/
 
 # Private database backups and local configuration
 .local/
+
+# Private runtime configuration and release-signing material
+**/database.json
+*.keystore
+*.jks
+*.p12
+*.pfx
+__pycache__/

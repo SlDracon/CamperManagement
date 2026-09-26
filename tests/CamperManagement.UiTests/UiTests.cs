@@ -23,6 +23,29 @@ public static class TestAppBuilder
 public class UiTests
 {
     [AvaloniaFact]
+    public void DatabaseSetupMasksPasswordAndBindsFields()
+    {
+        var configuration = new DatabaseConfiguration(Path.Combine(Path.GetTempPath(), "camper-ui-not-configured.json"), () => null);
+        var vm = new DatabaseConnectionViewModel(configuration, () => Task.CompletedTask) { Server = "testserver", Password = "synthetic" };
+        var view = new DatabaseConnectionView { DataContext = vm };
+        var window = new Window { Content = view, Width = 360, Height = 720 };
+        window.Show();
+        try
+        {
+            var boxes = view.GetVisualDescendants().OfType<TextBox>().ToArray();
+            Assert.Equal(5, boxes.Length);
+            Assert.Equal("testserver", boxes[0].Text);
+            var password = Assert.Single(boxes, box => box.PasswordChar != '\0');
+            Assert.Equal("synthetic", password.Text);
+            boxes[0].Text = "changed-server";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("changed-server", vm.Server);
+            Assert.True(view.GetVisualDescendants().OfType<Button>().Single().IsEnabled);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void U03_MainViewDoesNotReplaceContext()
     {
         var db = new FakeDatabase();
@@ -36,7 +59,7 @@ public class UiTests
     {
         var db = new FakeDatabase();
         var main = new MainViewModel(db);
-        object[] models = [main, main.CurrentView, new CamperViewModel(main), new RechnungenViewModel(main), new AddCamperViewModel(main, db), new EditCamperViewModel(main, db, Data.Camper()), new AddRechnungViewModel(main, db), new EditRechnungViewModel(main, db, Data.Invoice()), new PrintSelectionViewModel(main, db), new SettingsViewModel(db)];
+        object[] models = [main, main.CurrentView, new CamperViewModel(main), new RechnungenViewModel(main), new AddCamperViewModel(main, db), new EditCamperViewModel(main, db, Data.Camper()), new AddRechnungViewModel(main, db), new EditRechnungViewModel(main, db, Data.Invoice()), new PrintSelectionViewModel(main, db), new SettingsViewModel(db), new DatabaseConnectionViewModel(new DatabaseConfiguration(Path.Combine(Path.GetTempPath(), "camper-ui-not-configured.json"), () => null), () => Task.CompletedTask)];
         foreach (var model in models)
         {
             var template = Application.Current!.DataTemplates.Single(t => t.Match(model));

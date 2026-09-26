@@ -18,9 +18,13 @@ public partial class SettingsViewModel : ViewModelBase
     public Task LoadTask { get; private set; } = Task.CompletedTask;
     public IAsyncRelayCommand LoadCommand { get; }
     public IAsyncRelayCommand SaveCommand { get; }
-    public SettingsViewModel(IDatabaseService db)
+    public IRelayCommand? ConnectionCommand { get; }
+    public bool CanConfigureConnection => ConnectionCommand != null;
+    public SettingsViewModel(IDatabaseService db, Action? configureConnection = null)
     {
         _db = db;
+        if (configureConnection != null)
+            ConnectionCommand = new RelayCommand(configureConnection);
         LoadCommand = new AsyncRelayCommand(() => LoadTask = LoadAsync(), () => !IsBusy);
         SaveCommand = new AsyncRelayCommand(SaveAsync, () => !IsBusy && _loaded != null);
         PropertyChanged += (_, e) =>

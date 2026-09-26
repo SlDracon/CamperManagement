@@ -17,8 +17,8 @@ public partial class MainView : UserControl
                 await vm.InitializeAsync();
                 if (App.IsSmokeTest && Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
                 {
-                    var tabs = (TabViewModel)vm.CurrentView;
-                    var success = ((ViewModelBase)tabs.CamperView).StatusMessage == null && ((ViewModelBase)tabs.RechnungenView).StatusMessage == null;
+                    var tabs = vm.CurrentView as TabViewModel;
+                    var success = tabs != null && ((ViewModelBase)tabs.CamperView).StatusMessage == null && ((ViewModelBase)tabs.RechnungenView).StatusMessage == null;
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => desktop.Shutdown(success ? 0 : 1), Avalonia.Threading.DispatcherPriority.Background);
                 }
             }

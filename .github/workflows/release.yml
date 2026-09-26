@@ -1,0 +1,175 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      android_code: ${{ steps.version.outputs.android_code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validate release tag
+        id: version
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$RELEASE_REF" == refs/tags/* ]] || { echo 'Select an existing version tag to release.' >&2; exit 1; }
+          python3 build/release_version.py "$RELEASE_TAG"
+
+  checks:
+    needs: version
+    uses: ./.github/workflows/tests.yml
+
+  desktop:
+    needs: [version, checks]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: windows-2025
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+      RELEASE_RID: ${{ matrix.rid }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.112'
+      - name: Publish with bundled .NET runtime
+        shell: pwsh
+        run: |
+          dotnet publish CamperManagement.Desktop -c Release -r $env:RELEASE_RID --self-contained true -p:PublishTrimmed=false "-p:Version=$env:RELEASE_VERSION" -o artifacts/app
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item docs/release-installation.txt artifacts/app/README.txt
+          Copy-Item CamperManagement/Assets/Fonts/LICENSE.txt artifacts/app/FONT-LICENSE.txt
+          New-Item -ItemType Directory -Force artifacts/packages | Out-Null
+      - name: Package Linux (preserves executable permissions)
+        if: runner.os == 'Linux'
+        run: tar -czf "artifacts/packages/CamperManagement-${RELEASE_VERSION}-linux-x64.tar.gz" -C artifacts/app .
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path artifacts/app/* -DestinationPath "artifacts/packages/CamperManagement-$env:RELEASE_VERSION-win-x64.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.rid }}
+          path: artifacts/packages/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  android:
+    needs: [version, checks]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+      ANDROID_VERSION_CODE: ${{ needs.version.outputs.android_code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.112'
+      - name: Verify signing configuration and restore private keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ANDROID_KEYSTORE_PASSWORD; do
+            [[ -n "${!name}" ]] || { echo "Missing repository secret: $name" >&2; exit 1; }
+          done
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/campermanagement.p12"
+      - run: dotnet workload install android
+      - name: Install Android dependencies
+        run: dotnet build CamperManagement.Android -t:InstallAndroidDependencies -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64" -p:AcceptAndroidSdkLicenses=true
+      - name: Publish signed APK
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          dotnet publish CamperManagement.Android -c Release -o artifacts/android \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME_21_X64" \
+            -p:Version="$RELEASE_VERSION" -p:ApplicationDisplayVersion="$RELEASE_VERSION" \
+            -p:ApplicationVersion="$ANDROID_VERSION_CODE" -p:AndroidPackageFormats=apk \
+            -p:AndroidKeyStore=true -p:AndroidSigningKeyStore="$RUNNER_TEMP/campermanagement.p12" \
+            -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS" \
+            -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD
+          mkdir -p artifacts/packages
+          mapfile -t apks < <(find artifacts/android -maxdepth 1 -name '*-Signed.apk')
+          [[ ${#apks[@]} -eq 1 ]] || { echo 'Expected exactly one signed APK.' >&2; exit 1; }
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$apksigner" verify --verbose --print-certs "${apks[0]}"
+          cp "${apks[0]}" "artifacts/packages/CamperManagement-${RELEASE_VERSION}-android.apk"
+      - name: Remove private keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/campermanagement.p12"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: artifacts/packages/*.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    needs: [version, desktop, android]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: artifacts
+          merge-multiple: true
+      - name: Check completeness and create checksums
+        working-directory: artifacts
+        run: |
+          files=("CamperManagement-${RELEASE_VERSION}-linux-x64.tar.gz" "CamperManagement-${RELEASE_VERSION}-win-x64.zip" "CamperManagement-${RELEASE_VERSION}-android.apk")
+          for file in "${files[@]}"; do test -s "$file"; done
+          sha256sum "${files[@]}" > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+      - name: Upload all files before making the release public
+        run: |
+          if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1]))["isDraft"] else "Release already published; use a new version tag.")' "$RUNNER_TEMP/release.json"
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "CamperManagement $RELEASE_VERSION" --generate-notes
+          fi
+          gh release upload "$RELEASE_TAG" artifacts/* --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest

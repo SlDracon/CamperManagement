@@ -135,3 +135,8 @@ Nicht jede Plattformprüfung ist auf diesem Linux-Rechner ausführbar. Native Da
 - A08 prüft verspätete Antworten nach Verlassen des Formulars. Navigation während einer Speicherung wird blockiert; Hintergrundexporte verwenden unabhängige Werte-Snapshots.
 - Geldwerte/Filter wurden zusätzlich mit zwei kurzzeitig eingesetzten Mutationen geprüft: falsche ToEven-Rundung und ODER statt UND lassen Tests fehlschlagen. Beide Änderungen wurden zurückgenommen.
 - Keine pauschale 100-%-Coverage-Behauptung. TRX- und Coverage-Dateien sind reproduzierbare Testartefakte; Layout- und Geräteprüfungen bleiben ergänzend notwendig.
+
+
+## Ergänzung: lokale Konfiguration und Release-Pipeline
+
+Zusätzliche Unit-Tests prüfen fehlende/defekte Konfiguration, Vorrang der Umgebungsvariable, private Unix-Dateirechte, atomaren Austausch, Validierung und die asynchrone Verbindungsprüfung vor dem Speichern. Ein UI-Test prüft Feldbindung und maskierte Passworteingabe; der bestehende Template-Test enthält auch die neue Einrichtungsansicht. `build/tests` prüft erlaubte Versions-Tags, unsichere Eingaben, Android-Grenzen und aufsteigende Versioncodes.
