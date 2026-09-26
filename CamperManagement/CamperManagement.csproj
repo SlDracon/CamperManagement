@@ -25,7 +25,6 @@
     <PackageReference Include="itext" />
     <PackageReference Include="itext.bouncy-castle-adapter" />
     <PackageReference Include="itext.pdfhtml" />
-    <PackageReference Include="itext7.pdfhtml" />
     <PackageReference Include="MySqlConnector" />
   </ItemGroup>
 

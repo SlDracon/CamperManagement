@@ -9,7 +9,7 @@ namespace CamperManagement.Services
     public class DatabaseService
     {
         private const string ConnectionString =
-            "Server=192.168.1.51;Port=15000;User=camper;Password=GlJzTYAWaa5FWuNH;Database=camper;AllowZeroDateTime=True;ConvertZeroDateTime=True;";
+            "Server=192.168.50.51;Port=15000;User=camper;Password=GlJzTYAWaa5FWuNH;Database=camper;AllowZeroDateTime=True;ConvertZeroDateTime=True;";
 
         public async Task<List<CamperDisplayModel>> GetActiveCampersAsync()
         {
