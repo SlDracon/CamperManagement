@@ -24,13 +24,21 @@ public sealed class FixedClock : TimeProvider
 }
 public class FakeDatabase : IDatabaseService
 {
-    public int Calls, Adds, Updates, Deactivations;
+    public int Calls, Adds, Updates, Deactivations, CostIncreases;
+    public decimal? ExpectedContractCost;
+    public decimal SavedIncrease;
+    public string? SavedDescription;
+    public Func<Task>? BookCost;
     public Exception? SaveError;
     public Rechnung? SavedInvoice;
     public CamperDisplayModel? SavedCamper;
     public List<int> Printed = new();
     public List<RechnungDisplayModel> Invoices = new();
     public List<CamperDisplayModel> Campers = new();
+    public List<CamperHistoryEntry> History = new();
+    public Func<string?, CancellationToken, Task<List<CamperHistoryEntry>>>? HistoryLoader;
+    public Task<List<CamperHistoryEntry>> GetCamperHistoryAsync(string? platznummer = null, CancellationToken cancellationToken = default) =>
+        HistoryLoader?.Invoke(platznummer, cancellationToken) ?? Task.FromResult(History.Where(h => platznummer == null || h.After.Camper.Platznr == platznummer).ToList());
     public List<string> Places = new() { "1", "2" };
     public Standardfaktoren Factors = new(0.5m, 8m, 1);
     public Func<string?, string?, Task<decimal>> Reading = (_, _) => Task.FromResult(10m);
@@ -70,12 +78,23 @@ public class FakeDatabase : IDatabaseService
         SavedCamper = c.Snapshot();
         return Task.CompletedTask;
     }
-    public Task UpdateCamperAsync(CamperDisplayModel c)
+    public Task UpdateCamperAsync(CamperDisplayModel c, decimal expectedContractCost)
     {
         Save();
         Updates++;
+        ExpectedContractCost = expectedContractCost;
         SavedCamper = c.Snapshot();
         return Task.CompletedTask;
+    }
+    public async Task IncreaseContractCostAsync(int camperId, string? platznummer, decimal expectedContractCost, decimal increase, string description)
+    {
+        if (BookCost != null) await BookCost();
+        Save();
+        var camper = Campers.Single(c => c.Id == camperId && c.Platznr == platznummer);
+        if (camper.Vertragskosten != expectedContractCost) throw new InvalidOperationException("Vertragskosten geändert. Bitte neu laden.");
+        SavedIncrease = increase; SavedDescription = description; ExpectedContractCost = expectedContractCost;
+        camper.Vertragskosten = ContractCostRules.NewTotal(expectedContractCost, increase);
+        CostIncreases++;
     }
     public Task<List<int>> GetAvailableJahreAsync(CancellationToken cancellationToken = default) => Task.FromResult(new List<int> { 2025, 2026 });
     public Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int y, CancellationToken cancellationToken = default) => Task.FromResult(new List<KostenEintrag>());

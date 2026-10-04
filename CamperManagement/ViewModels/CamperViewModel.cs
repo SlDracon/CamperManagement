@@ -11,7 +11,13 @@ public partial class CamperViewModel : ViewModelBase
 {
     [ObservableProperty] private CamperDisplayModel? selectedCamper;
     public IRelayCommand EditSelectedCommand { get; }
-    partial void OnSelectedCamperChanged(CamperDisplayModel? value) => EditSelectedCommand?.NotifyCanExecuteChanged();
+    public IRelayCommand HistoryCommand { get; }
+    public IRelayCommand IncreaseCostCommand { get; }
+    partial void OnSelectedCamperChanged(CamperDisplayModel? value)
+    {
+        EditSelectedCommand?.NotifyCanExecuteChanged();
+        IncreaseCostCommand?.NotifyCanExecuteChanged();
+    }
     private readonly MainViewModel _main;
     [ObservableProperty] private ObservableCollection<CamperDisplayModel> camperList = new();
     [ObservableProperty] private ObservableCollection<CamperDisplayModel> filteredCamperList = new();
@@ -39,8 +45,10 @@ public partial class CamperViewModel : ViewModelBase
     public CamperViewModel(MainViewModel main) : base(main.ErrorLog)
     {
         _main = main;
+        IncreaseCostCommand = new RelayCommand(() => { if (SelectedCamper != null) _main.NavigateToCommand.Execute(new ContractCostIncreaseViewModel(_main, SelectedCamper)); }, () => SelectedCamper != null && !IsBusy && !IsLoading);
+        HistoryCommand = new RelayCommand(() => _main.NavigateToCommand.Execute(new CamperHistoryViewModel(_main.Database, SelectedCamper?.Platznr, Log)), () => !IsBusy);
         EditSelectedCommand = new RelayCommand(() => EditCamperCommand!.Execute(SelectedCamper), () => SelectedCamper != null && !IsBusy && !IsLoading);
-        PropertyChanged += (_, e) => { if (e.PropertyName is nameof(IsBusy) or nameof(IsLoading)) { EditSelectedCommand.NotifyCanExecuteChanged(); LoadDataCommand?.NotifyCanExecuteChanged(); PrintAblesetabelleCommand?.NotifyCanExecuteChanged(); } };
+        PropertyChanged += (_, e) => { if (e.PropertyName is nameof(IsBusy) or nameof(IsLoading)) { EditSelectedCommand.NotifyCanExecuteChanged(); IncreaseCostCommand.NotifyCanExecuteChanged(); HistoryCommand.NotifyCanExecuteChanged(); LoadDataCommand?.NotifyCanExecuteChanged(); PrintAblesetabelleCommand?.NotifyCanExecuteChanged(); } };
         AddCamperCommand = new RelayCommand(() => _main.NavigateToCommand.Execute(new AddCamperViewModel(_main, _main.Database) { OnSavedAsync = LoadDataAsync }));
         EditCamperCommand = new RelayCommand<CamperDisplayModel>(c => { if (c != null) _main.NavigateToCommand.Execute(new EditCamperViewModel(_main, _main.Database, c) { OnSavedAsync = LoadDataAsync }); });
         PrintCommand = new RelayCommand(() => _main.NavigateToCommand.Execute(new PrintSelectionViewModel(_main, _main.Database)));
@@ -72,6 +80,6 @@ public partial class CamperViewModel : ViewModelBase
     private void Filter()
     {
         var terms = SearchQuery.Parse(CamperSearchQuery);
-        FilteredCamperList = new(CamperList.Where(c => SearchQuery.MatchesTerms(terms, c.Platznr, c.Anrede, c.Vorname, c.Nachname, c.Straße, c.PLZ, c.Ort, c.Email)));
+        FilteredCamperList = new(CamperList.Where(c => SearchQuery.MatchesTerms(terms, c.Platznr, c.Anrede, c.Vorname, c.Nachname, c.ErsterName, c.Straße, c.PLZ, c.Ort, c.Email, c.ZweiterName, c.ZweiteStraße, c.ZweitePLZ, c.ZweiterOrt, c.ZweiteEmail)));
     }
 }

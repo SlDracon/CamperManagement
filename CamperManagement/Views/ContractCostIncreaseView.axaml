@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CamperManagement.ViewModels"
+             xmlns:views="using:CamperManagement.Views"
+             xmlns:rules="using:CamperManagement.Services"
+             xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="CamperManagement.Views.ContractCostIncreaseView"
+             x:DataType="vm:ContractCostIncreaseViewModel">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="{DynamicResource FormPadding}" Spacing="10" MaxWidth="580" HorizontalAlignment="Stretch">
+            <TextBlock Text="Vertragskosten erhöhen" FontSize="24" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Identity}" TextWrapping="Wrap" />
+            <views:OperationStatus />
+            <TextBlock Text="Aktueller Endpreis" />
+            <TextBlock x:Name="CurrentCost" Text="{Binding CurrentCostDisplay}" FontSize="20" />
+            <TextBlock Text="Erhöhung in €" />
+            <TextBox x:Name="IncreaseAmount" AutomationProperties.Name="Erhöhung in Euro" Text="{Binding IncreaseText}" Watermark="z. B. 25,00" IsEnabled="{Binding CanEdit}" />
+            <TextBlock Text="Neuer Endpreis" />
+            <TextBlock x:Name="NewTotal" Text="{Binding NewTotalDisplay}" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="Begründung / Beschreibung" />
+            <TextBox x:Name="IncreaseDescription" AutomationProperties.Name="Begründung oder Beschreibung" Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" MaxLength="{x:Static rules:ContractCostRules.MaxDescriptionLength}" IsEnabled="{Binding CanEdit}" />
+            <TextBlock Text="Die Erhöhung gilt ab dem Buchen. Betrag und Begründung werden in der Historie gespeichert." TextWrapping="Wrap" />
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />
+            <WrapPanel Classes="toolbar">
+                <Button x:Name="BookIncrease" Content="Erhöhung buchen" Command="{Binding BookCommand}" />
+                <Button Content="Historie" Command="{Binding HistoryCommand}" />
+                <Button Content="Neu laden" Command="{Binding ReloadCommand}" />
+            </WrapPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

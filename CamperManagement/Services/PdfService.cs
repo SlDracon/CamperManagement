@@ -209,8 +209,8 @@ namespace CamperManagement.Services
             foreach (var rechnung in rechnungen)
             {
                 table.AddCell(rechnung.Platznr);
-                table.AddCell(rechnung.Vorname);
-                table.AddCell(rechnung.Nachname);
+                table.AddCell(rechnung.VornameDisplay);
+                table.AddCell(rechnung.NachnameDisplay);
                 table.AddCell(rechnung.VerbrauchDisplay);
                 table.AddCell($"{rechnung.Betrag.ToString("0.00", GermanCulture)} €");
                 table.AddCell(rechnung.Jahr.ToString());
@@ -397,7 +397,7 @@ namespace CamperManagement.Services
                 }
 
                 var groupedRechnungen = await Task.Run(() => snapshot
-                    .GroupBy(r => (Platz: string.IsNullOrWhiteSpace(r.Platznr) ? "Unbekannt" : r.Platznr!.Trim(), r.CamperId))
+                    .GroupBy(r => (Platz: string.IsNullOrWhiteSpace(r.Platznr) ? "Unbekannt" : r.Platznr!.Trim(), r.CamperId, r.Anrede, r.Vorname, r.Nachname, r.ZweiteAnrede, r.ZweiterVorname, r.ZweiterNachname, r.Straße, r.PLZ, r.Ort))
                     .ToList());
 
                 if (groupedRechnungen.Count == 0)
@@ -523,7 +523,7 @@ namespace CamperManagement.Services
                 .SetFontSize(12)
                 .SetTextAlignment(TextAlignment.CENTER));
 
-            document.Add(new Paragraph(" "));
+            document.Add(new Paragraph(" ").SetFontSize(4).SetMargin(0));
 
             // Tabelle für oberen Bereich erstellen
             var table = new Table(UnitValue.CreatePercentArray([4.5f, 3.5f])).UseAllAvailableWidth();
@@ -531,8 +531,16 @@ namespace CamperManagement.Services
             // Linke Zellen für Adresse
             var addressTable = new Table(UnitValue.CreatePercentArray(1)).UseAllAvailableWidth();
             addressTable.AddCell(new Cell().Add(new Paragraph("Strandbetriebe August Heim * Am Strande 25 * 23730 Neustadt").SetFont(regularFont).SetFontSize(7)).SetBorder(Border.NO_BORDER));
-            addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Anrede).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
-            addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Vorname} {rechnung.Nachname}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            if (rechnung.HatZweitenVertragsnehmer)
+            {
+                foreach (var name in new[] { $"{rechnung.Anrede} {rechnung.Vorname} {rechnung.Nachname}".Trim(), $"{rechnung.ZweiteAnrede} {rechnung.ZweiterVorname} {rechnung.ZweiterNachname}".Trim() })
+                    addressTable.AddCell(new Cell().Add(new Paragraph(name).SetFont(regularFont).SetFontSize(11).SetMargin(0).SetMultipliedLeading(1.15f)).SetBorder(Border.NO_BORDER));
+            }
+            else
+            {
+                addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Anrede).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+                addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.Vorname} {rechnung.Nachname}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
+            }
             addressTable.AddCell(new Cell().Add(new Paragraph(rechnung.Straße).SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
             addressTable.AddCell(new Cell().Add(new Paragraph($"{rechnung.PLZ} {rechnung.Ort}").SetFont(regularFont).SetFontSize(11)).SetBorder(Border.NO_BORDER));
             table.AddCell(new Cell().Add(addressTable).SetBorder(Border.NO_BORDER));
@@ -548,7 +556,7 @@ namespace CamperManagement.Services
 
             document.Add(table);
 
-            document.Add(new Paragraph(" "));
+            document.Add(new Paragraph(" ").SetFontSize(4).SetMargin(0));
             if (rechnung.Art == "Strom")
             {
                 // Überschrift für Rechnungsdetails
@@ -593,7 +601,7 @@ namespace CamperManagement.Services
 
             document.Add(detailsContentTable);
 
-            document.Add(new Paragraph(" "));
+            document.Add(new Paragraph(" ").SetFontSize(4).SetMargin(0));
 
             // Zahlungsdetails
             document.Add(new Paragraph("– Rechnungsbetrag wird eingezogen –").SetMarginTop(15)
@@ -648,6 +656,10 @@ namespace CamperManagement.Services
                 .SetFontSize(14)
                 .SetTextAlignment(TextAlignment.CENTER)
                 .SetMarginBottom(20));
+
+            var recipient = rechnungen[0];
+            document.Add(new Paragraph(recipient.VertragsnehmerNamen).SetFont(regularFont).SetFontSize(11));
+            document.Add(new Paragraph($"{recipient.Straße}\n{recipient.PLZ} {recipient.Ort}").SetFont(regularFont).SetFontSize(10).SetMarginBottom(12));
 
             var table = new Table(UnitValue.CreatePercentArray([3, 3, 2])).UseAllAvailableWidth();
             table.AddHeaderCell(new Cell().Add(new Paragraph("Art").SetFont(boldFont)).SetBackgroundColor(new DeviceRgb(240, 240, 240)));

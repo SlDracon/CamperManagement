@@ -7,7 +7,7 @@ using CamperManagement.Models;
 using MySqlConnector;
 namespace CamperManagement.Services;
 
-public sealed class DatabaseService : IDatabaseService
+public sealed partial class DatabaseService : IDatabaseService
 {
     // The explicit constructor is used by all tests; it never falls back to the live server.
     private readonly Func<string> _connectionString;
@@ -50,9 +50,21 @@ public sealed class DatabaseService : IDatabaseService
     }
     private static string Text(MySqlDataReader r, string col) => r[col] is DBNull ? "" : Convert.ToString(r[col], System.Globalization.CultureInfo.InvariantCulture) ?? "";
     private const string Active = "c.active=1 AND (c.deactivated IS NULL OR c.deactivated='0000-00-00 00:00:00')";
-    // Resolve only the designated billing person, once, even with additional contacts.
-    private const string PersonJoin = "JOIN camper_personen cp ON cp.id=(SELECT MIN(cp2.id) FROM camper_personen cp2 WHERE cp2.camper_id=c.id AND cp2.rechnungsadresse=1) JOIN personen pers ON pers.id=cp.personen_id";
-    public Task<List<CamperDisplayModel>> GetActiveCampersAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, $"SELECT c.id,p.platznr,pers.*,c.Vertragskosten FROM camper c JOIN plaetze p ON p.id=c.platz_id {PersonJoin} WHERE {Active} ORDER BY p.platznr", r => new CamperDisplayModel
+    // Explicit roles keep holder order stable when the billing address changes.
+    // The fallback supports legacy records; additional contacts are never inferred as holders.
+    private static string PersonJoin => JoinPersons(false);
+    private static string JoinPersons(bool includeMissing) => $"""
+        {(includeMissing ? "LEFT JOIN" : "JOIN")} camper_personen cp ON cp.id=(SELECT cp2.id FROM camper_personen cp2
+          WHERE cp2.camper_id=c.id AND (cp2.vertragsnehmer_nr=1 OR (cp2.vertragsnehmer_nr IS NULL AND cp2.rechnungsadresse=1))
+          ORDER BY cp2.vertragsnehmer_nr IS NULL,cp2.id LIMIT 1)
+        {(includeMissing ? "LEFT JOIN" : "JOIN")} personen pers ON pers.id=cp.personen_id
+        LEFT JOIN camper_personen cp_partner ON cp_partner.camper_id=c.id AND cp_partner.vertragsnehmer_nr=2
+        LEFT JOIN personen partner ON partner.id=cp_partner.personen_id
+        """;
+    private const string CamperColumns = "c.id,p.platznr,pers.*,c.Vertragskosten,c.gemeinsame_adresse,partner.id zweite_person_id,partner.anrede zweite_anrede,partner.vorname zweiter_vorname,partner.nachname zweiter_nachname,partner.strasse zweite_strasse,partner.plz zweite_plz,partner.ort zweiter_ort,partner.email zweite_email,COALESCE(cp_partner.rechnungsadresse,0) zweite_rechnungsadresse";
+    public Task<List<CamperDisplayModel>> GetActiveCampersAsync(CancellationToken cancellationToken = default) =>
+        ReadAsync(cancellationToken, $"SELECT {CamperColumns} FROM camper c JOIN plaetze p ON p.id=c.platz_id {PersonJoin} WHERE {Active} ORDER BY p.platznr", MapCamper);
+    private static CamperDisplayModel MapCamper(MySqlDataReader r) => new CamperDisplayModel
     {
         Id = r.GetInt32(0),
         Platznr = Text(r, "platznr"),
@@ -63,13 +75,20 @@ public sealed class DatabaseService : IDatabaseService
         PLZ = Text(r, "plz"),
         Ort = Text(r, "ort"),
         Email = Text(r, "email"),
-        Vertragskosten = r.GetDecimal("Vertragskosten")
-    });
+        Vertragskosten = r.GetDecimal("Vertragskosten"),
+        HatZweitenVertragsnehmer = r["zweite_person_id"] is not DBNull,
+        GemeinsameAdresse = r.GetBoolean("gemeinsame_adresse"),
+        RechnungsadresseZweiterVertragsnehmer = r.GetBoolean("zweite_rechnungsadresse") && !r.GetBoolean("gemeinsame_adresse"),
+        ZweiteAnrede = Text(r, "zweite_anrede"), ZweiterVorname = Text(r, "zweiter_vorname"), ZweiterNachname = Text(r, "zweiter_nachname"),
+        ZweiteStraße = Text(r, r.GetBoolean("gemeinsame_adresse") ? "strasse" : "zweite_strasse"),
+        ZweitePLZ = Text(r, r.GetBoolean("gemeinsame_adresse") ? "plz" : "zweite_plz"),
+        ZweiterOrt = Text(r, r.GetBoolean("gemeinsame_adresse") ? "ort" : "zweiter_ort"), ZweiteEmail = Text(r, "zweite_email")
+    };
     public Task<List<RechnungDisplayModel>> GetRechnungenAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, """
-        SELECT r.*,p.platznr,s.camper_id,s.anrede,s.vorname,s.nachname,s.strasse,s.plz,s.ort
+        SELECT r.*,p.platznr,s.camper_id,s.anrede,s.vorname,s.nachname,s.strasse,s.plz,s.ort,s.zweite_anrede,s.zweiter_vorname,s.zweiter_nachname
         FROM rechnungen r JOIN plaetze p ON p.id=r.platz_id
         LEFT JOIN rechnung_empfaenger s ON s.rechnung_id=r.id ORDER BY r.id DESC
-        """, r => new RechnungDisplayModel { Id = r.GetInt32("id"), Platznr = Text(r, "platznr"), Alt = r.GetDecimal("alt"), Neu = r.GetDecimal("neu"), Verbrauch = r.GetDecimal("verbrauch"), Faktor = r.GetDecimal("faktor"), Betrag = r.GetDecimal("betrag"), Jahr = r.GetInt32("jahr"), Art = Text(r, "type"), Gedruckt = r.GetBoolean("printed") ? "Ja" : "Nein", CamperId = r["camper_id"] is DBNull ? null : r.GetInt32("camper_id"), RecipientResolved = r["camper_id"] is not DBNull, Anrede = Text(r, "anrede"), Vorname = Text(r, "vorname"), Nachname = r["camper_id"] is DBNull ? "Zuordnung prüfen" : Text(r, "nachname"), Straße = Text(r, "strasse"), PLZ = Text(r, "plz"), Ort = Text(r, "ort") });
+        """, r => new RechnungDisplayModel { Id = r.GetInt32("id"), Platznr = Text(r, "platznr"), Alt = r.GetDecimal("alt"), Neu = r.GetDecimal("neu"), Verbrauch = r.GetDecimal("verbrauch"), Faktor = r.GetDecimal("faktor"), Betrag = r.GetDecimal("betrag"), Jahr = r.GetInt32("jahr"), Art = Text(r, "type"), Gedruckt = r.GetBoolean("printed") ? "Ja" : "Nein", CamperId = r["camper_id"] is DBNull ? null : r.GetInt32("camper_id"), RecipientResolved = r["camper_id"] is not DBNull, Anrede = Text(r, "anrede"), Vorname = Text(r, "vorname"), Nachname = r["camper_id"] is DBNull ? "Zuordnung prüfen" : Text(r, "nachname"), Straße = Text(r, "strasse"), PLZ = Text(r, "plz"), Ort = Text(r, "ort"), ZweiteAnrede = Text(r, "zweite_anrede"), ZweiterVorname = Text(r, "zweiter_vorname"), ZweiterNachname = Text(r, "zweiter_nachname") });
     public Task<List<string>> GetPlatznummernAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, "SELECT DISTINCT platznr FROM plaetze ORDER BY platznr", r => r.GetString(0));
     public Task<List<int>> GetAvailableJahreAsync(CancellationToken cancellationToken = default) => ReadAsync(cancellationToken, "SELECT DISTINCT jahr FROM rechnungen ORDER BY jahr DESC", r => r.GetInt32(0));
     public async Task<int> GetPlatzIdByPlatznummerAsync(string? platznummer, CancellationToken cancellationToken = default)
@@ -95,8 +114,7 @@ public sealed class DatabaseService : IDatabaseService
         await using var c = await OpenConnectionAsync();
         await using var tx = await c.BeginTransactionAsync();
         var id = await LockPlatzAsync(c, tx, platznummer);
-        await using var cmd = Command(c, $"UPDATE camper c SET active=0,deactivated=NOW(),updated=NOW() WHERE platz_id=@id AND {Active}", tx, ("@id", id));
-        await cmd.ExecuteNonQueryAsync();
+        await DeactivateWithHistoryAsync(c, tx, id);
         await tx.CommitAsync();
     }
     public async Task AddNewCamperAsync(CamperDisplayModel value)
@@ -105,26 +123,91 @@ public sealed class DatabaseService : IDatabaseService
         await using var c = await OpenConnectionAsync();
         await using var tx = await c.BeginTransactionAsync();
         var platzId = await LockPlatzAsync(c, tx, value.Platznr);
-        await using (var deactivate = Command(c, $"UPDATE camper c SET active=0,deactivated=NOW(),updated=NOW() WHERE platz_id=@id AND {Active}", tx, ("@id", platzId)))
-            await deactivate.ExecuteNonQueryAsync();
-        await using var person = Command(c, "INSERT INTO personen(anrede,vorname,nachname,strasse,plz,ort,email,created,updated) VALUES(@a,@v,@n,@s,@z,@o,@e,NOW(),NOW())", tx, PersonArgs(value));
-        await person.ExecuteNonQueryAsync();
-        await using var camper = Command(c, "INSERT INTO camper(platz_id,active,created,updated,Vertragskosten) VALUES(@p,1,NOW(),NOW(),@k)", tx, ("@p", platzId), ("@k", BillingRules.Round(value.Vertragskosten)));
+        await DeactivateWithHistoryAsync(c, tx, platzId);
+        var firstPerson = await InsertPersonAsync(c, tx, value);
+        await using var camper = Command(c, "INSERT INTO camper(platz_id,active,created,updated,Vertragskosten,gemeinsame_adresse) VALUES(@p,1,NOW(),NOW(),@k,@g)", tx,
+            ("@p", platzId), ("@k", BillingRules.Round(value.Vertragskosten)), ("@g", !value.HatZweitenVertragsnehmer || value.GemeinsameAdresse));
         await camper.ExecuteNonQueryAsync();
-        await using var link = Command(c, "INSERT INTO camper_personen(camper_id,personen_id,rechnungsadresse) VALUES(@c,@p,1)", tx, ("@c", camper.LastInsertedId), ("@p", person.LastInsertedId));
+        var camperId = (int)camper.LastInsertedId;
+        await using var link = Command(c, "INSERT INTO camper_personen(camper_id,personen_id,rechnungsadresse,vertragsnehmer_nr) VALUES(@c,@p,@b,1)", tx,
+            ("@c", camperId), ("@p", firstPerson), ("@b", !value.NutztZweiteRechnungsadresse));
         await link.ExecuteNonQueryAsync();
+        await SaveSecondPersonAsync(c, tx, camperId, null, value);
+        await RecordCamperHistoryAsync(c, tx, "created", null, await ReadCamperStateAsync(c, tx, camperId));
         await tx.CommitAsync();
     }
     private static (string, object?)[] PersonArgs(CamperDisplayModel v) => new (string, object?)[] { ("@a", v.Anrede?.Trim() ?? ""), ("@v", v.Vorname?.Trim()), ("@n", v.Nachname?.Trim()), ("@s", v.Straße?.Trim()), ("@z", v.PLZ?.Trim()), ("@o", v.Ort?.Trim()), ("@e", v.Email?.Trim() ?? "") };
-    public async Task UpdateCamperAsync(CamperDisplayModel value)
+    private static async Task<int> InsertPersonAsync(MySqlConnection c, MySqlTransaction tx, CamperDisplayModel value)
+    {
+        await using var person = Command(c, "INSERT INTO personen(anrede,vorname,nachname,strasse,plz,ort,email,created,updated) VALUES(@a,@v,@n,@s,@z,@o,@e,NOW(),NOW())", tx, PersonArgs(value));
+        await person.ExecuteNonQueryAsync();
+        return (int)person.LastInsertedId;
+    }
+    private static async Task UpdatePersonAsync(MySqlConnection c, MySqlTransaction tx, int personId, CamperDisplayModel value)
+    {
+        await using var person = Command(c, "UPDATE personen SET anrede=@a,vorname=@v,nachname=@n,strasse=@s,plz=@z,ort=@o,email=@e,updated=NOW() WHERE id=@id", tx,
+            PersonArgs(value).Concat(new (string, object?)[] { ("@id", personId) }).ToArray());
+        await person.ExecuteNonQueryAsync();
+    }
+    private static async Task SaveSecondPersonAsync(MySqlConnection c, MySqlTransaction tx, int camperId, int? personId, CamperDisplayModel value)
+    {
+        if (!value.HatZweitenVertragsnehmer)
+        {
+            // Remove only the explicit second-holder link. Historical snapshots and contacts remain intact.
+            await using var remove = Command(c, "DELETE FROM camper_personen WHERE camper_id=@c AND vertragsnehmer_nr=2", tx, ("@c", camperId));
+            await remove.ExecuteNonQueryAsync();
+            return;
+        }
+        var second = new CamperDisplayModel
+        {
+            Anrede = value.ZweiteAnrede, Vorname = value.ZweiterVorname, Nachname = value.ZweiterNachname, Email = value.ZweiteEmail,
+            Straße = value.GemeinsameAdresse ? value.Straße : value.ZweiteStraße,
+            PLZ = value.GemeinsameAdresse ? value.PLZ : value.ZweitePLZ,
+            Ort = value.GemeinsameAdresse ? value.Ort : value.ZweiterOrt
+        };
+        if (personId.HasValue)
+            await UpdatePersonAsync(c, tx, personId.Value, second);
+        else
+        {
+            personId = await InsertPersonAsync(c, tx, second);
+            await using var link = Command(c, "INSERT INTO camper_personen(camper_id,personen_id,rechnungsadresse,vertragsnehmer_nr) VALUES(@c,@p,0,2)", tx,
+                ("@c", camperId), ("@p", personId.Value));
+            await link.ExecuteNonQueryAsync();
+        }
+        await using var billing = Command(c, "UPDATE camper_personen SET rechnungsadresse=@b WHERE camper_id=@c AND vertragsnehmer_nr=2", tx,
+            ("@b", value.NutztZweiteRechnungsadresse), ("@c", camperId));
+        await billing.ExecuteNonQueryAsync();
+    }
+    public async Task UpdateCamperAsync(CamperDisplayModel value, decimal expectedContractCost)
     {
         BillingRules.ValidateCamper(value);
         await using var c = await OpenConnectionAsync();
         await using var tx = await c.BeginTransactionAsync();
         var platz = await LockPlatzAsync(c, tx, value.Platznr);
-        await using var cmd = Command(c, $"UPDATE camper c {PersonJoin} SET pers.anrede=@a,pers.vorname=@v,pers.nachname=@n,pers.strasse=@s,pers.plz=@z,pers.ort=@o,pers.email=@e,pers.updated=NOW(),c.Vertragskosten=@k,c.updated=NOW() WHERE c.id=@id AND c.platz_id=@p AND {Active}", tx, PersonArgs(value).Concat(new (string, object?)[] { ("@id", value.Id), ("@p", platz), ("@k", BillingRules.Round(value.Vertragskosten)) }).ToArray());
-        if (await cmd.ExecuteNonQueryAsync() == 0)
-            throw new InvalidOperationException("Der Camper wurde inzwischen geändert oder deaktiviert. Bitte neu laden.");
+        int firstLink, firstPerson;
+        int? secondPerson;
+        await using (var current = Command(c, $"SELECT cp.id,pers.id,partner.id FROM camper c {PersonJoin} WHERE c.id=@id AND c.platz_id=@p AND {Active} FOR UPDATE", tx,
+            ("@id", value.Id), ("@p", platz)))
+        await using (var reader = await current.ExecuteReaderAsync())
+        {
+            if (!await reader.ReadAsync())
+                throw new InvalidOperationException("Der Camper wurde inzwischen geändert oder deaktiviert. Bitte neu laden.");
+            firstLink = reader.GetInt32(0); firstPerson = reader.GetInt32(1);
+            secondPerson = reader.IsDBNull(2) ? null : reader.GetInt32(2);
+        }
+        var before = await ReadCamperStateAsync(c, tx, value.Id);
+        EnsureContractCostUnchanged(before.Camper.Vertragskosten, expectedContractCost);
+        await UpdatePersonAsync(c, tx, firstPerson, value);
+        await using (var camper = Command(c, "UPDATE camper SET Vertragskosten=@k,gemeinsame_adresse=@g,updated=NOW() WHERE id=@id", tx,
+            ("@id", value.Id), ("@k", BillingRules.Round(value.Vertragskosten)), ("@g", !value.HatZweitenVertragsnehmer || value.GemeinsameAdresse)))
+            await camper.ExecuteNonQueryAsync();
+        await using (var reset = Command(c, "UPDATE camper_personen SET rechnungsadresse=0 WHERE camper_id=@c", tx, ("@c", value.Id)))
+            await reset.ExecuteNonQueryAsync();
+        await using (var first = Command(c, "UPDATE camper_personen SET vertragsnehmer_nr=1,rechnungsadresse=@b WHERE id=@id", tx,
+            ("@id", firstLink), ("@b", !value.NutztZweiteRechnungsadresse)))
+            await first.ExecuteNonQueryAsync();
+        await SaveSecondPersonAsync(c, tx, value.Id, secondPerson, value);
+        await RecordCamperHistoryAsync(c, tx, "updated", before, await ReadCamperStateAsync(c, tx, value.Id));
         await tx.CommitAsync();
     }
     public async Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int jahr, CancellationToken cancellationToken = default)
@@ -163,7 +246,15 @@ public sealed class DatabaseService : IDatabaseService
         await using var cmd = Command(c, "INSERT INTO rechnungen(platz_id,alt,neu,verbrauch,faktor,betrag,jahr,type,created) VALUES(@p,@a,@n,@v,@f,@b,@j,@t,NOW())", tx, InvoiceArgs(value));
         await cmd.ExecuteNonQueryAsync();
         var id = (int)cmd.LastInsertedId;
-        await using var recipient = Command(c, $"INSERT INTO rechnung_empfaenger(rechnung_id,camper_id,anrede,vorname,nachname,strasse,plz,ort,vertragskosten) SELECT @id,c.id,pers.anrede,pers.vorname,pers.nachname,pers.strasse,pers.plz,pers.ort,c.Vertragskosten FROM camper c {PersonJoin} WHERE c.platz_id=@p AND {Active}", tx, ("@id", id), ("@p", value.PlatzId));
+        await using var recipient = Command(c, $"""
+            INSERT INTO rechnung_empfaenger(rechnung_id,camper_id,anrede,vorname,nachname,strasse,plz,ort,vertragskosten,zweite_anrede,zweiter_vorname,zweiter_nachname)
+            SELECT @id,c.id,pers.anrede,pers.vorname,pers.nachname,
+              CASE WHEN cp_partner.rechnungsadresse=1 AND c.gemeinsame_adresse=0 THEN partner.strasse ELSE pers.strasse END,
+              CASE WHEN cp_partner.rechnungsadresse=1 AND c.gemeinsame_adresse=0 THEN partner.plz ELSE pers.plz END,
+              CASE WHEN cp_partner.rechnungsadresse=1 AND c.gemeinsame_adresse=0 THEN partner.ort ELSE pers.ort END,
+              c.Vertragskosten,COALESCE(partner.anrede,''),COALESCE(partner.vorname,''),COALESCE(partner.nachname,'')
+            FROM camper c {PersonJoin} WHERE c.platz_id=@p AND {Active}
+            """, tx, ("@id", id), ("@p", value.PlatzId));
         if (await recipient.ExecuteNonQueryAsync() != 1)
             throw new InvalidOperationException("Dem Platz muss genau ein aktiver Camper mit Rechnungsadresse zugeordnet sein.");
         await tx.CommitAsync();

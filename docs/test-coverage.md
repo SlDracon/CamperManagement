@@ -146,3 +146,22 @@ Zusätzliche Unit-Tests prüfen fehlende/defekte Konfiguration, Vorrang der Umge
 Zusätzliche Tests prüfen abgebrochene/überholte Datenbankabfragen, Navigation während des Ladens, Wiederholung nach Abbruch, unveränderten Druckstatus bei Exportabbruch, die nicht abbrechbare abschließende Status-Transaktion, Fehlerprotokollierung ohne Nachrichten/Nutzdaten, Rotation und Unix-Dateirechte, synthetische Design-Daten sowie Tab/Enter/F2 und zugängliche Feldnamen. PDF-Tests prüfen Abbruch vor/nach der Dateiauswahl und zwischen Rechnungen. Ein echter Datenbanktest prüft Abbruch und anschließende Wiederverwendbarkeit. Python-Tests sichern ELF-, RELRO- und APK-Ausrichtungsfehler ab.
 
 Der lokale Prüflauf umfasst 130 Unit-, 29 MariaDB-, 44 PDF- und 19 Avalonia-UI-Tests (222 insgesamt), dazu sieben Python-Buildtests. Reale Plattformprüfungen und verbleibende Grenzen stehen in [Plattformprüfungen](platform-checks.md). Die UI-Tests prüfen Automation-Namen, ersetzen jedoch keinen vollständigen Screenreader-Test.
+
+## Ergänzung: zwei Vertragsnehmer
+
+`ContractPartnerTests.cs` in den vier Testsuiten prüft gemeinsame und getrennte Anschriften, die Wahl beider Rechnungsadressen, Pflichtfelder, Suche nach der zweiten Person, Speichern in beiden Formularen, Stammdatenänderungen und das Entfernen des zweiten Vertragsnehmers. Datenbanktests prüfen Rollbacks, eindeutige Vertragsrollen, unveränderte historische Rechnungsempfänger, führende Nullen in Postleitzahlen und die Wiederholung von Migration 003. PDF-Tests prüfen beide vollständigen Namen, die ausgewählte Anschrift, getrennte Exporte bei geänderten Empfängerdaten, unveränderliche Exportkopien und lange Namen auf einer A5-Seite.
+
+Der Stand mit zwei Vertragsnehmern umfasst 145 Unit-, 38 MariaDB-, 51 PDF- und 21 UI-Tests, insgesamt 255. Die neuen Formularbereiche wurden bei 390 und 900 Pixel Breite sowie synthetische Strom-/Wasserrechnungen visuell geprüft.
+
+## Ergänzung: Camper-Historie
+
+`HistoryTests.cs` prüft in Unit-, MariaDB- und UI-Suiten Belegungswechsel, vollständige Vorher-/Nachher-Werte, Änderungen an beiden Vertragsnehmern, unveränderte gespeicherte Historie, ausbleibende Einträge bei unverändertem Speichern und vollständige Rollbacks bei Historien- oder Stammdatenfehlern. Migrationstests prüfen die einmalige Bestandsaufnahme auch inaktiver und unvollständig zugeordneter Belegungen. Abbruch, überholte Antworten, Wiederholen, Platzfilter, Suche in alten Werten und Navigation sind abgedeckt. Die echten Formularbindungen werden bei 390 und 1000 Pixel Breite geprüft.
+
+Dieser Stand umfasst 155 Unit-, 47 MariaDB-, 51 PDF- und 24 UI-Tests, insgesamt 277. Die Historienansicht wurde zusätzlich mit synthetischen Daten in schmalen und breiten Fenstern visuell geprüft.
+
+
+## Ergänzung: Vertragskostenerhöhungen
+
+`ContractCostTests.cs` prüft in Unit-, MariaDB- und UI-Suiten kaufmännische Rundung jeder Erhöhung, positive Mindestbeträge, die SQL-Dezimalgrenze und die erforderliche Beschreibung. Geprüft werden außerdem die Vorschau mit frisch geladenem Preis, Abbruch durch Navigation vor dem Buchen, gesperrte parallele Speicheraktionen, erneutes Laden nach einem Preiskonflikt und die Suche nach Begründungen. Datenbanktests sichern atomare Buchung mit Historie, Rollback bei Historienfehlern, konkurrierende und wiederholte Buchungsversuche, den Schutz vor veralteten Stammdatenformularen, unveränderte alte Rechnungskopien, Belegungswechsel und wiederholbare Migration 005 ab. Die Endpreis-Spalte, Buchungsmaske und Historie wurden mit synthetischen Daten bei 390 und 1000 Pixel Breite gerendert und geprüft.
+
+Der vollständige lokale Lauf umfasst 172 Unit-, 58 MariaDB-, 51 PDF- und 28 Avalonia-UI-Tests, insgesamt **309 erfolgreiche Tests**. Der Desktop-Debug-Build ist ohne Warnungen und Fehler erfolgreich. Echte mobile Geräte wurden für diese Erweiterung nicht erneut geprüft.

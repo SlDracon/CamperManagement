@@ -14,6 +14,8 @@
             <Button Content="Kosten drucken" Command="{Binding PrintCommand}" />
             <Button Content="Ablesetabelle drucken" Command="{Binding PrintAblesetabelleCommand}" />
             <Button Content="Bearbeiten" Command="{Binding EditSelectedCommand}" ToolTip.Tip="Auswahl bearbeiten (Enter oder F2)" />
+            <Button Content="Kosten erhöhen" Command="{Binding IncreaseCostCommand}" ToolTip.Tip="Vertragskostenerhöhung für den ausgewählten Camper buchen" />
+            <Button Content="Historie" Command="{Binding HistoryCommand}" ToolTip.Tip="Belegungen und Änderungen ansehen; Auswahl grenzt den Platz vor" />
             <Button Content="Neu laden" Command="{Binding LoadDataCommand}" Margin="10,0,0,6" />
         </WrapPanel>
         <StackPanel Grid.Row="1">
@@ -40,14 +42,13 @@
             </DataGrid.KeyBindings>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Platznr" Binding="{Binding Platznr}" />
-                <DataGridTextColumn Header="Anrede" Binding="{Binding Anrede}" />
-                <DataGridTextColumn Header="Vorname" Binding="{Binding Vorname}" />
-                <DataGridTextColumn Header="Nachname" Binding="{Binding Nachname}" />
-                <DataGridTextColumn Header="Straße" Binding="{Binding Straße}" />
-                <DataGridTextColumn Header="PLZ" Binding="{Binding PLZ}" />
-                <DataGridTextColumn Header="Ort" Binding="{Binding Ort}" />
+                <DataGridTextColumn Header="Vertragsnehmer" Binding="{Binding ErsterName}" />
+                <DataGridTextColumn Header="Zweiter Vertragsnehmer" Binding="{Binding ZweiterName}" />
+                <DataGridTextColumn Header="Rechnungsstraße" Binding="{Binding Rechnungsstraße}" />
+                <DataGridTextColumn Header="PLZ" Binding="{Binding RechnungsPLZ}" />
+                <DataGridTextColumn Header="Ort" Binding="{Binding Rechnungsort}" />
                 <DataGridTextColumn Header="E-Mail" Binding="{Binding Email}" />
-                <DataGridTextColumn Header="Vertragskosten" Binding="{Binding Vertragskosten}" />
+                <DataGridTextColumn Header="Fixkosten" Binding="{Binding EndpreisDisplay}" SortMemberPath="Vertragskosten" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

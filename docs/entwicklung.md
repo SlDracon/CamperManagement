@@ -69,11 +69,12 @@ Die ausführlichen Bedienungsfolgen stehen in der [Bedienungsanleitung](bedienun
 | `rechnung_empfaenger` | Dauerhafte Empfänger- und Adresskopie pro Rechnung |
 | `standardfaktoren` | Ein aktueller Datensatz für Strom/Wasser mit Versionsnummer |
 | `jahresfaktoren` | Altbestand aus Migration 001; von der aktuellen Anwendung nicht mehr verwendet |
+| `camper_historie` | Versionierte Vorher-/Nachher-Stände, Bestandsaufnahmen und Belegungswechsel |
 | `camper_schema_version` | Ausgeführte Migrationen |
 
 Rechnungszahlen werden als `DECIMAL(18,6)`, Rechnungsbeträge als `DECIMAL(18,2)` gespeichert. Personen-Postleitzahlen sind Text, damit führende Nullen erhalten bleiben.
 
-Camperwechsel sperren den Platz und speichern Deaktivierung, Person, Belegung und Verknüpfung in einer Transaktion. Beim Rechnungseinfügen wird der Empfänger in derselben Transaktion festgehalten. Mehrere zusätzliche Kontakte dürfen weder Rechnungszeilen noch Summen vervielfachen.
+Camperwechsel sperren den Platz und speichern Deaktivierung, Person, Belegung und Verknüpfung in einer Transaktion. Die expliziten Rollen 1 und 2 in `camper_personen.vertragsnehmer_nr` bestimmen die Vertragsnehmer unabhängig von der Rechnungsadresse; sonstige Kontakte haben keine Rolle. `camper.gemeinsame_adresse` steuert die gemeinsame Anschrift. Beim Rechnungseinfügen werden beide Namen und die gewählte Anschrift in derselben Transaktion festgehalten. Mehrere zusätzliche Kontakte dürfen weder Rechnungszeilen noch Summen vervielfachen.
 
 Faktoren werden als zusammengehöriger Strom-/Wasser-Datensatz gespeichert. Das Update verlangt die zuvor gelesene Versionsnummer; konkurrierende Änderungen werden gemeldet, statt sie unbemerkt zu überschreiben.
 
@@ -122,3 +123,16 @@ Vor einer Änderung passende Tests auswählen, anschließend den betroffenen Bui
 ## Gemeinsame Darstellung und Suche
 
 `Styles.axaml` enthält semantische Farben, Formularabstände und Tabellen-/Toolbar-Stile. `OperationStatus` zeigt Laden, Speichern und Export konsistent. Tabellen erlauben Tastaturfokus und Bearbeitung mit Enter/F2; Felder und Symbolschaltflächen besitzen Automation-Namen. Die Suche zerlegt die Anfrage einmal je Eingabe, nicht pro Datensatz. Eine lokale Messung mit 10.000 synthetischen Rechnungen ergab für zehn Filtervorgänge zusammen etwa 50 ms; dies ist ein Messwert dieses Rechners, keine garantierte Laufzeit. Debouncing/Paging bleiben bei künftig größeren Beständen messungsabhängig.
+
+## Camper-Historie
+
+`DatabaseService.History.cs` erfasst vollständige Stammdaten vor und nach jeder fachlichen Änderung innerhalb derselben Platzsperre und Transaktion. Zusätzliche Kontakte werden nicht als Vertragsnehmer interpretiert. Ein Speichern ohne veränderten Zustand erzeugt keinen Historieneintrag. Migration 004 übernimmt den vorhandenen Bestand ausdrücklich als Baseline, ohne vergangene Änderungen zu erfinden.
+
+`CamperHistoryViewModel` lädt asynchron, unterstützt Platzfilter, Suche und Abbruch beim Navigieren. Veraltete Ergebnisse werden verworfen. JSON-Auswertung und Vorbereitung der Suchtexte erfolgen bei Datenbankabfragen außerhalb des UI-Kontexts. Die Ansicht nutzt eine virtualisierte Eintragsliste und einen separat scrollbaren Detailbereich; Änderungen der aktuellen Camperdaten bearbeiten keine Historieneinträge.
+
+
+## Vertragskostenerhöhungen
+
+`ContractCostIncreaseViewModel` lädt beim Öffnen die aktuellen Camperdaten, zeigt den gerundeten Endpreis als Vorschau und bucht erst über den ausdrücklichen Befehl. `ContractCostRules` prüft positive Centbeträge, die SQL-Dezimalgrenze und die Begründung. `DatabaseService.ContractCosts.cs` verwendet die gleiche Platzsperre wie die übrigen Camper-Schreibvorgänge; Preis und Historie werden atomar gespeichert. Der neue Endpreis bleibt im bestehenden Feld `Vertragskosten`, sodass neue Rechnungskopien und Kostenberichte den gewohnten Datenweg verwenden.
+
+`UpdateCamperAsync` verlangt den ursprünglich gelesenen Preis getrennt vom zu speichernden Modell. Dadurch kann eine bereits geöffnete Stammdatenbearbeitung keine inzwischen gebuchte Erhöhung unbemerkt zurücksetzen. Ein erneuter Buchungsversuch mit veraltetem Preis schlägt ebenfalls fehl. Dies ist eine Prüfung des Ausgangspreises, keine allgemeine Versionskontrolle aller Camperfelder. Nach einem unklaren Netzwerkfehler gibt es keinen automatischen Schreib-Retry; den aktuellen Stand beziehungsweise die Historie neu laden.

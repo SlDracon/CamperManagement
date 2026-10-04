@@ -4,7 +4,7 @@ using CamperManagement.Tests;
 using MySqlConnector;
 namespace CamperManagement.IntegrationTests;
 
-public class DatabaseTests : IAsyncLifetime
+public partial class DatabaseTests : IAsyncLifetime
 {
     private readonly string _name = "camper_test_" + Guid.NewGuid().ToString("N");
     private string _server = null!; private DatabaseService _db = null!;
@@ -173,9 +173,9 @@ public class DatabaseTests : IAsyncLifetime
         await _db.AddNewCamperAsync(Data.Camper());
         var current = Assert.Single(await _db.GetActiveCampersAsync());
         current.Vorname = "Changed";
-        await _db.UpdateCamperAsync(current);
+        await _db.UpdateCamperAsync(current, current.Vertragskosten);
         Assert.Equal("Test", Assert.Single(await _db.GetRechnungenAsync()).Vorname);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _db.UpdateCamperAsync(old));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _db.UpdateCamperAsync(old, old.Vertragskosten));
         Assert.Equal("Changed", Assert.Single(await _db.GetActiveCampersAsync()).Vorname);
     }
     [Fact]
@@ -245,7 +245,7 @@ public class DatabaseTests : IAsyncLifetime
     {
         var c = Assert.Single(await _db.GetActiveCampersAsync());
         c.Nachname = "O'Neil; DROP TABLE camper; --";
-        await _db.UpdateCamperAsync(c);
+        await _db.UpdateCamperAsync(c, c.Vertragskosten);
         Assert.Equal(c.Nachname, Assert.Single(await _db.GetActiveCampersAsync()).Nachname);
     }
     [Fact]
@@ -316,7 +316,7 @@ public class DatabaseTests : IAsyncLifetime
         await SchemaMigration.ApplyAsync(_db);
         Assert.Equal(0.81m, (await _db.GetStandardfaktorenAsync()).Strom);
         Assert.Equal(3, await Number("SELECT COUNT(*) FROM jahresfaktoren"));
-        Assert.Equal(2, await Number("SELECT MAX(version) FROM camper_schema_version"));
+        Assert.Equal(5, await Number("SELECT MAX(version) FROM camper_schema_version"));
     }
     [Fact]
     public async Task Migration_IsIdempotentAndNeverGuesses()

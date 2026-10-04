@@ -12,7 +12,7 @@ müssen gegebenenfalls zuvor deinstalliert werden. Geräteprüfung und Behebung 
 bekannten Skia-Warnungen für 16-KB-Speicherseiten stehen noch aus.
 
 Beim ersten Start Server, Port, Datenbank, Benutzer und Passwort eintragen.
-Die Datenbank muss im Netzwerk erreichbar sein und die Migrationen 001/002 enthalten.
+Die Datenbank muss im Netzwerk erreichbar sein und die Migrationen 001/002/003/004/005 enthalten.
 Die Anwendung richtet keine leere Datenbank ein und führt keine Migrationen aus.
 Die Zugangsdaten werden nur im privaten Benutzerverzeichnis dieses Geräts gespeichert.
 Einstellungen > Datenbankverbindung öffnet die Einrichtung erneut.

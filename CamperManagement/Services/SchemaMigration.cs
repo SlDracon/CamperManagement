@@ -49,6 +49,37 @@ public static class SchemaMigration
                 await using (var done = new MySqlCommand("INSERT INTO camper_schema_version(version) VALUES(2)", c))
                     await done.ExecuteNonQueryAsync();
             }
+            await using var checkPartners = new MySqlCommand("SELECT COUNT(*) FROM camper_schema_version WHERE version=3", c);
+            if (Convert.ToInt32(await checkPartners.ExecuteScalarAsync()) == 0)
+            {
+                using var stream = typeof(SchemaMigration).Assembly.GetManifestResourceStream("CamperManagement.Migrations.003_contract_partners.sql")!;
+                using var reader = new StreamReader(stream);
+                await using (var cmd = new MySqlCommand(await reader.ReadToEndAsync(), c) { CommandTimeout = 120 })
+                    await cmd.ExecuteNonQueryAsync();
+                await using (var done = new MySqlCommand("INSERT INTO camper_schema_version(version) VALUES(3)", c))
+                    await done.ExecuteNonQueryAsync();
+            }
+            await using var checkHistory = new MySqlCommand("SELECT COUNT(*) FROM camper_schema_version WHERE version=4", c);
+            if (Convert.ToInt32(await checkHistory.ExecuteScalarAsync()) == 0)
+            {
+                using var stream = typeof(SchemaMigration).Assembly.GetManifestResourceStream("CamperManagement.Migrations.004_camper_history.sql")!;
+                using var reader = new StreamReader(stream);
+                await using (var cmd = new MySqlCommand(await reader.ReadToEndAsync(), c) { CommandTimeout = 120 })
+                    await cmd.ExecuteNonQueryAsync();
+                await DatabaseService.SeedCamperHistoryAsync(c);
+                await using (var done = new MySqlCommand("INSERT INTO camper_schema_version(version) VALUES(4)", c))
+                    await done.ExecuteNonQueryAsync();
+            }
+            await using var checkCosts = new MySqlCommand("SELECT COUNT(*) FROM camper_schema_version WHERE version=5", c);
+            if (Convert.ToInt32(await checkCosts.ExecuteScalarAsync()) == 0)
+            {
+                using var stream = typeof(SchemaMigration).Assembly.GetManifestResourceStream("CamperManagement.Migrations.005_contract_cost_increases.sql")!;
+                using var reader = new StreamReader(stream);
+                await using (var cmd = new MySqlCommand(await reader.ReadToEndAsync(), c) { CommandTimeout = 120 })
+                    await cmd.ExecuteNonQueryAsync();
+                await using (var done = new MySqlCommand("INSERT INTO camper_schema_version(version) VALUES(5)", c))
+                    await done.ExecuteNonQueryAsync();
+            }
             await using var unresolved = new MySqlCommand("SELECT COUNT(*) FROM rechnungen r LEFT JOIN rechnung_empfaenger s ON s.rechnung_id=r.id WHERE s.rechnung_id IS NULL", c);
             return Convert.ToInt32(await unresolved.ExecuteScalarAsync());
         }

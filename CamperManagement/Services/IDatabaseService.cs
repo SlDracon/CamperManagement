@@ -6,12 +6,14 @@ namespace CamperManagement.Services;
 
 public interface IDatabaseService
 {
+    Task<List<CamperHistoryEntry>> GetCamperHistoryAsync(string? platznummer = null, CancellationToken cancellationToken = default);
     Task<List<CamperDisplayModel>> GetActiveCampersAsync(CancellationToken cancellationToken = default);
     Task<List<RechnungDisplayModel>> GetRechnungenAsync(CancellationToken cancellationToken = default);
     Task<List<string>> GetPlatznummernAsync(CancellationToken cancellationToken = default);
     Task DeactivateOldCamperAsync(string? platznummer);
     Task AddNewCamperAsync(CamperDisplayModel camper);
-    Task UpdateCamperAsync(CamperDisplayModel camper);
+    Task UpdateCamperAsync(CamperDisplayModel camper, decimal expectedContractCost);
+    Task IncreaseContractCostAsync(int camperId, string? platznummer, decimal expectedContractCost, decimal increase, string description);
     Task<List<int>> GetAvailableJahreAsync(CancellationToken cancellationToken = default);
     Task<List<KostenEintrag>> GetRechnungenForJahrAsync(int jahr, CancellationToken cancellationToken = default);
     Task MarkRechnungAsPrintedAsync(int id);

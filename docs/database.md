@@ -4,7 +4,7 @@
 
 Die Anwendung kann `CAMPER_DB_CONNECTION` aus der Umgebung verwenden. Der bisherige lokale Standard bleibt für die vorhandene Installation erhalten. Tests und Migrationstool verwenden ausschließlich explizite Verbindungen.
 
-Vor der ersten Nutzung der neuen Version sind die Migrationen 001 und 002 erforderlich. Zuerst alle anderen Anwendungsinstanzen schließen und eine vollständige konsistente Sicherung einschließlich Tabellen, Triggern und Routinen erstellen. Sicherungen sind vertraulich: `.local/backups/` ist von Git ausgeschlossen und sollte Modus 0700, die Dateien Modus 0600 erhalten. Die Sicherung enthält die bisherigen Tabellen; Rücksicherung nur bei gestoppter Anwendung und zunächst in eine separate Datenbank prüfen. DDL-Anweisungen sind unter MariaDB nicht gemeinsam transaktional rückgängig zu machen.
+Vor der ersten Nutzung der neuen Version sind die Migrationen 001 bis 005 erforderlich. Zuerst alle anderen Anwendungsinstanzen schließen und eine vollständige konsistente Sicherung einschließlich Tabellen, Triggern und Routinen erstellen. Sicherungen sind vertraulich: `.local/backups/` ist von Git ausgeschlossen und sollte Modus 0700, die Dateien Modus 0600 erhalten. Die Sicherung enthält die bisherigen Tabellen; Rücksicherung nur bei gestoppter Anwendung und zunächst in eine separate Datenbank prüfen. DDL-Anweisungen sind unter MariaDB nicht gemeinsam transaktional rückgängig zu machen.
 
 ```bash
 # Connection-String im geschützten Benutzerkontext setzen, niemals ins Repository schreiben.
@@ -67,3 +67,27 @@ mariadb-dump --defaults-extra-file=.local/mariadb-client.cnf \
 `DB_NAME` durch den richtigen Datenbanknamen ersetzen. Der verwendete Benutzer benötigt die Rechte zum Lesen der gesicherten Daten und Objekte. Bei einem Fehler ist eine eventuell schon angelegte Datei keine verifizierte Sicherung. Exitcode, Dateigröße und Dump-Abschluss prüfen; eine Prüfsumme allein weist keine Wiederherstellbarkeit nach.
 
 Eine Wiederherstellung zunächst manuell auf einem getrennten Server beziehungsweise in einer separat vorbereiteten Datenbank erproben. Tabellen, Rechnungsempfänger, Rechnungsanzahl und Jahressummen prüfen. Eine produktive Rücksicherung benötigt ein abgestimmtes Wartungsfenster mit geschlossenen Anwendungsinstanzen und dem zur Sicherung passenden Anwendungsstand. Produktive Sicherungen nicht als Datenquelle der automatisierten Tests verwenden; diese arbeiten mit eigenen synthetischen Fixtures.
+
+## Migration 003: Zwei Vertragsnehmer
+
+Die Migration ergänzt `camper_personen.vertragsnehmer_nr` (1 oder 2, pro Camper eindeutig), `camper.gemeinsame_adresse` und die zweiten Namensfelder in `rechnung_empfaenger`. Der bisher ausgewählte Rechnungsempfänger wird zum ersten Vertragsnehmer. Zusätzliche Kontakte werden nicht automatisch zu Vertragsnehmern; kombinierte Namen und „Eheleute“-Einträge werden nicht aufgeteilt.
+
+Beide Personen und die Wahl der Rechnungsadresse werden zusammen in einer Transaktion gespeichert. Bei gemeinsamer Anschrift gilt die Adresse der ersten Person. Das Entfernen des zweiten Vertragsnehmers entfernt nur dessen Vertragsverknüpfung; zusätzliche Kontakte und historische Rechnungen bleiben erhalten. Neue Rechnungen speichern beide Namen und die gewählte Anschrift als unveränderliche Kopie.
+
+Vor Nutzung der neuen Felder Migration 003 ausführen und alle verwendeten Clients auf diese Version aktualisieren. Alte Clients kennen die zwei Rollen nicht und dürfen diese Stammdaten anschließend nicht mehr bearbeiten. Eine Wiederholung der Migration überschreibt keine bereits eingerichteten Rollen und ergänzt keine zweiten Namen in alten Rechnungen.
+
+## Migration 004: Camper-Historie
+
+`camper_historie` speichert Ereignisart, UTC-Zeitpunkt sowie vollständige Vorher-/Nachher-Stände in versionierten JSON-Dokumenten. Die Oberfläche zeigt Zeitpunkte in der lokalen Zeitzone an. Migration 004 erzeugt eine Bestandsaufnahme für jede bisherige Belegung, auch inaktive und unvollständig zugeordnete Datensätze. Vorhandene `created`-/`deactivated`-Werte bleiben als Belegungsdaten erhalten; der Zeitpunkt der Bestandsaufnahme wird nicht als ursprünglicher Änderungszeitpunkt ausgegeben. Wiederholung erzeugt keine doppelten Bestandsaufnahmen und verändert keine vorhandenen Historieneinträge.
+
+Die Anwendung schreibt Historie und Stammdaten in derselben Transaktion. Ein Fehler beim Historieneintrag rollt den gesamten Schreibvorgang zurück. Bei Belegungswechseln werden das Ende der alten und der Beginn der neuen Belegung getrennt aufgezeichnet. Rechnungsdaten und frühere Rechnungsempfänger bleiben unverändert.
+
+Alle schreibenden Clients müssen auf diese Version aktualisiert werden. Ältere Clients oder direkte SQL-Änderungen umgehen die Anwendungsprotokollierung. Die Historie enthält personenbezogene Daten und gehört wie die übrigen Tabellen in die geschützte Datenbanksicherung. Sie ist kein manipulationssicheres Auditprotokoll; eine Benutzerzuordnung wird mangels Benutzeranmeldung nicht behauptet.
+
+## Migration 005: Vertragskostenerhöhungen
+
+Die Migration ergänzt die optionale Spalte `camper_historie.beschreibung` (`VARCHAR(1000)`). Bestehende Historieneinträge, Camperpreise und Rechnungskopien bleiben unverändert; es werden keine Erhöhungen automatisch gebucht. Die Migration ist nach einem Abbruch wiederholbar.
+
+Eine Buchung aktualisiert `camper.Vertragskosten` und schreibt das Ereignis `cost_increased` samt Begründung und vollständigen Vorher-/Nachher-Ständen in derselben Transaktion. Der Erhöhungsbetrag ergibt sich aus den beiden gespeicherten Preisen. Ein Fehler beim Historieneintrag rollt den Preis zurück. Alle Schreibvorgänge sperren zuerst den Platz; Buchung und Stammdatenbearbeitung prüfen zusätzlich den vom Formular erwarteten bisherigen Vertragsbetrag. Bei einer Preisänderung seit dem Laden wird ohne Schreibwirkung abgebrochen. Alte Clients besitzen diese Prüfung nicht; deshalb alle schreibenden Clients aktualisieren.
+
+Buchungen sind an die aktive Belegung gebunden, nicht an ihren späteren Nachfolger. Bereits gespeicherte Rechnungsempfänger und Vertragskosten bleiben unverändert. Die bestehende Historienansicht zeigt und durchsucht die Begründung; ihre bisherigen Grenzen für direkte SQL-Zugriffe und externe Änderungen gelten weiterhin.

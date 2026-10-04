@@ -29,7 +29,7 @@ Fertige Pakete für Linux x64, Windows x64 und Android stehen nach einem erfolgr
 
 ## Schnellstart für Linux
 
-Benötigt werden das .NET-10-SDK, eine grafische Sitzung und eine erreichbare Datenbank mit dem vorhandenen CamperManagement-Schema einschließlich der Migrationen 001 und 002. Die bisher geprüfte Datenbankversion ist MariaDB 11.8.8. SDK-Auswahl und Paketversionen stehen in [global.json](global.json) und [Directory.Packages.props](Directory.Packages.props).
+Benötigt werden das .NET-10-SDK, eine grafische Sitzung und eine erreichbare Datenbank mit dem vorhandenen CamperManagement-Schema einschließlich der Migrationen 001 bis 005. Die bisher geprüfte Datenbankversion ist MariaDB 11.8.8. SDK-Auswahl und Paketversionen stehen in [global.json](global.json) und [Directory.Packages.props](Directory.Packages.props).
 
 Alle Befehle in dieser Dokumentation werden im Stammverzeichnis des Repositorys ausgeführt.
 

@@ -12,7 +12,7 @@ Die Tabellen lassen sich über die Spaltenüberschriften sortieren. Spaltenbreit
 
 ## Camper erfassen und bearbeiten
 
-Unter **Camper** erscheinen die aktiven Belegungen mit ihrer Rechnungsadresse.
+Unter **Camper** erscheinen die aktiven Belegungen mit ihrer Rechnungsadresse. Die Spalte **Vertragsnehmer** fasst Vor- und Nachname zusammen; die Anrede wird in der Tabelle ausgeblendet. Beim Erfassen und Bearbeiten bleiben die einzelnen Namensfelder und die Anrede erhalten. Die letzte Spalte **Fixkosten** zeigt die aktuellen Vertragskosten einschließlich aller bisher gebuchten Erhöhungen, in Euro.
 
 1. Mit **+** das Formular öffnen.
 2. Eine vorhandene Platznummer auswählen.
@@ -29,6 +29,36 @@ Eine Camperzeile auswählen und **Bearbeiten**, **Enter** oder **F2** drücken. 
 Zieht eine andere Person auf einen bereits belegten Platz, den neuen Camper über **+** auf diesem Platz anlegen. Beim Speichern wird die bisherige Belegung deaktiviert und die neue Belegung angelegt. Schlägt der Vorgang fehl, bleibt die bisherige Belegung erhalten.
 
 Für einen Personenwechsel nicht einfach den Namen des bisherigen Campers überschreiben. Die Bearbeitung ist für Korrekturen derselben Belegung gedacht. Bereits gespeicherte Rechnungen behalten ihren ursprünglichen Empfänger und die damalige Rechnungsadresse, auch nach einem Wechsel oder einer Stammdatenkorrektur.
+
+### Zwei Vertragsnehmer und Rechnungsadresse
+
+Unter **Camper → Bearbeiten** oder beim Hinzufügen **Zweiten Vertragsnehmer hinterlegen** aktivieren. Vor- und Nachname werden für jede Person getrennt erfasst; die Personen müssen nicht verheiratet sein. Bestehende Einträge mit „Eheleute“ bleiben erhalten. Soll ein solcher Eintrag auf zwei einzelne Personen umgestellt werden, die Namen manuell auf die beiden Bereiche aufteilen.
+
+**Gemeinsame Adresse** ist zunächst aktiviert. Wohnen beide an verschiedenen Anschriften, diese Option ausschalten und Straße, PLZ und Ort der zweiten Person eingeben. Unter **Rechnungsadresse** die Anschrift des ersten oder zweiten Vertragsnehmers wählen. Auch zwei Anschriften im gleichen Ort sind möglich. E-Mail und Anrede der zweiten Person sind optional.
+
+Neue Rechnungen enthalten immer beide vollständigen Namen und genau die ausgewählte Anschrift. Die Namen und Rechnungsadresse werden beim Erfassen der Rechnung festgehalten; spätere Stammdatenänderungen verändern bereits gespeicherte Rechnungen nicht. Beim Export nach Platz werden unterschiedliche gespeicherte Empfänger oder Anschriften in getrennte PDFs aufgeteilt. In der Camperliste lässt sich auch nach der zweiten Person und ihrer Anschrift suchen.
+
+### Vertragskostenerhöhung buchen
+
+1. In der Camperliste die betreffende Zeile auswählen und **Kosten erhöhen** öffnen.
+2. Den frisch geladenen **aktuellen Endpreis** prüfen.
+3. Die **Erhöhung in €** eingeben, beispielsweise `25,00`. Der neue Endpreis wird sofort als Vorschau angezeigt.
+4. Eine **Begründung / Beschreibung** ergänzen, etwa „Gestiegene Wartungskosten“ (Pflichtfeld, höchstens 1000 Zeichen).
+5. **Erhöhung buchen** wählen. Danach erscheint die aktualisierte Camperliste.
+
+Erhöhungen sind feste Eurobeträge und gelten sofort ab dem Buchen. Jeder Betrag wird kaufmännisch auf Cent gerundet und muss danach mindestens 0,01 € betragen. Mehrere Buchungen addieren sich auf den aktuellen Endpreis. **Zurück** vor dem Buchen schreibt nichts. Die Beträge für Wasser und Strom bleiben davon unabhängig.
+
+Unter **Historie** sind Zeitpunkt, Begründung, Erhöhungsbetrag sowie alter und neuer Endpreis nachlesbar. Die Suche findet auch die Begründung. Buchungen bleiben der damaligen Belegung zugeordnet, auch nach einem Camperwechsel. Bestehende Rechnungen und ihre gespeicherten Vertragskosten werden nicht nachträglich geändert; neue Rechnungen übernehmen den dann aktuellen Endpreis. In der Jahres-Kostenübersicht werden wie bisher die Vertragskosten aus den Rechnungskopien verwendet.
+
+Bei gleichzeitig geänderten Vertragskosten wird die Buchung abgelehnt: **Neu laden**, den neuen Endpreis prüfen und erst danach erneut buchen. Das schützt auch vor einer versehentlichen doppelten Buchung mit demselben Ausgangspreis. Ein bereits geöffnetes Bearbeitungsformular kann eine zwischenzeitlich gebuchte Erhöhung nicht überschreiben; gegebenenfalls zur Camperliste zurückkehren und die Bearbeitung neu öffnen. Direkte Preis-Korrekturen über **Bearbeiten** bleiben möglich und erscheinen als allgemeine Stammdatenänderung mit Vorher-/Nachher-Werten; für eine begründete Erhöhung **Kosten erhöhen** verwenden.
+
+### Camper-Historie ansehen
+
+Unter **Camper → Historie** stehen Belegungswechsel und gespeicherte Stammdatenänderungen zur Verfügung. Ist eine Camperzeile ausgewählt, wird deren Platz vorgewählt. Ohne Auswahl öffnet sich die Historie aller Plätze. Über die Platzauswahl lässt sich der Filter jederzeit ändern.
+
+Ein Eintrag zeigt Datum/Uhrzeit, Belegung, Namen und die betroffenen Felder. Nach Auswahl erscheinen die alten und neuen Werte, etwa eine geänderte Straße, ein zweiter Vertragsnehmer, die Rechnungsadresse oder Vertragskosten. **Vollständiger Stand nach der Änderung** zeigt alle damaligen Daten. Die Suche berücksichtigt auch frühere Namen und Adressen. **Neu laden** holt aktuelle Einträge; **Zurück** führt wieder zur Camperliste.
+
+Bei Aktivierung der Funktion wird der vorhandene Stand aller aktiven und früheren Belegungen als **Bestandsaufnahme** übernommen. Deren gespeicherte Belegungszeiträume bleiben sichtbar. Einzelne Bearbeitungen vor Aktivierung wurden bisher nicht aufgezeichnet und können nicht rekonstruiert werden. Danach protokolliert diese Anwendung Anlegen, Ändern und Beenden einer Belegung. Unverändertes erneutes Speichern erzeugt keinen zusätzlichen Eintrag. Die Historienansicht ist ausschließlich lesend.
 
 ## Rechnungen erfassen
 

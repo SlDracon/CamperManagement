@@ -77,6 +77,16 @@ namespace CamperManagement.Models
             get; set;
         }
 
+        public string? ZweiteAnrede { get; set; }
+        public string? ZweiterVorname { get; set; }
+        public string? ZweiterNachname { get; set; }
+        public bool HatZweitenVertragsnehmer => !string.IsNullOrWhiteSpace(ZweiterVorname) || !string.IsNullOrWhiteSpace(ZweiterNachname);
+        public string VornameDisplay => HatZweitenVertragsnehmer ? $"{Vorname}\n{ZweiterVorname}" : Vorname ?? "";
+        public string NachnameDisplay => HatZweitenVertragsnehmer ? $"{Nachname}\n{ZweiterNachname}" : Nachname ?? "";
+        public string VertragsnehmerNamen => HatZweitenVertragsnehmer
+            ? $"{Vorname} {Nachname}\n{ZweiterVorname} {ZweiterNachname}"
+            : $"{Vorname} {Nachname}";
+
         public string AltDisplay => FormatValue(Alt);
         public string NeuDisplay => FormatValue(Neu);
         public string VerbrauchDisplay => FormatValue(Verbrauch);

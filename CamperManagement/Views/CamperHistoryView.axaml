@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CamperManagement.ViewModels"
+             xmlns:models="using:CamperManagement.Models"
+             xmlns:views="using:CamperManagement.Views"
+             xmlns:converters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="CamperManagement.Views.CamperHistoryView"
+             x:DataType="vm:CamperHistoryViewModel">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,2*,Auto,3*">
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="Camper-Historie" FontSize="22" />
+            <TextBlock Text="Frühere Belegungen sind als Bestandsstand enthalten. Einzelne Änderungen werden ab Aktivierung dieser Historie protokolliert." TextWrapping="Wrap" FontSize="12" />
+            <WrapPanel Classes="toolbar">
+                <ComboBox x:Name="HistoryPlace" IsEnabled="{Binding !IsLoading}" AutomationProperties.Name="Historie nach Platz filtern" ItemsSource="{Binding Places}" SelectedItem="{Binding SelectedPlace}" MinWidth="140" Margin="0,0,8,6" />
+                <Button Content="Neu laden" Command="{Binding ReloadCommand}" />
+            </WrapPanel>
+            <TextBox x:Name="HistorySearch" AutomationProperties.Name="Camper-Historie durchsuchen" Watermark="Name, Platz oder Änderung suchen…" Text="{Binding SearchText}" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,6,0,0">
+            <views:OperationStatus />
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+        <TextBlock Grid.Row="2" Text="{Binding ResultCount}" Margin="0,6" />
+        <Grid Grid.Row="3">
+            <ListBox x:Name="HistoryList" AutomationProperties.Name="Historieneinträge" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:CamperHistoryEntry">
+                        <StackPanel Margin="4" Spacing="3">
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Identity}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="Keine passenden Historieneinträge." IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+        <Separator Grid.Row="4" Margin="0,8" />
+        <ScrollViewer Grid.Row="5" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasSelection}">
+            <StackPanel Margin="4" Spacing="6">
+                <TextBlock Text="{Binding SelectedEntry.Identity}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding SelectedEntry.Occupation}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding SelectedEntry.IncreaseDisplay, StringFormat='Erhöhung: {0}'}" FontWeight="SemiBold" TextWrapping="Wrap"
+                           IsVisible="{Binding SelectedEntry.IncreaseDisplay, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />
+                <StackPanel IsVisible="{Binding SelectedEntry.HasDescription}" Spacing="3">
+                    <TextBlock Text="Begründung / Beschreibung" FontWeight="SemiBold" />
+                    <TextBlock x:Name="HistoryDescription" Text="{Binding SelectedEntry.Description}" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Text="{Binding SelectedEntry.DetailHeading}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                <ItemsControl x:Name="HistoryChanges" ItemsSource="{Binding SelectedEntry.Changes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:CamperHistoryChange">
+                            <StackPanel Margin="0,0,0,10" Spacing="2">
+                                <TextBlock Text="{Binding Field}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Before, StringFormat='Vorher: {0}'}" TextWrapping="Wrap" IsVisible="{Binding Before, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Text="{Binding After}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Expander Header="Vollständiger Stand nach der Änderung" IsVisible="{Binding SelectedEntry.HasPreviousState}" HorizontalContentAlignment="Stretch">
+                    <ItemsControl ItemsSource="{Binding SelectedEntry.StateFields}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:CamperHistoryChange">
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="{Binding Field}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding After}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

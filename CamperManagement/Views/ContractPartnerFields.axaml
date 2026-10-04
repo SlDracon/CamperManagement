@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CamperManagement.ViewModels"
+             x:Class="CamperManagement.Views.ContractPartnerFields"
+             x:DataType="vm:CamperFormViewModel">
+    <StackPanel IsEnabled="{Binding !IsBusy}" Margin="0,16,0,0">
+        <CheckBox x:Name="SecondPartnerToggle" Content="Zweiten Vertragsnehmer hinterlegen" IsChecked="{Binding HatZweitenVertragsnehmer}" />
+        <StackPanel x:Name="SecondPartnerDetails" IsVisible="{Binding HatZweitenVertragsnehmer}" Spacing="4">
+            <TextBlock Text="Zweiter Vertragsnehmer" FontWeight="SemiBold" Margin="0,8,0,4" />
+            <TextBlock Text="Anrede" />
+            <ComboBox AutomationProperties.Name="Anrede des zweiten Vertragsnehmers" ItemsSource="{Binding EinzelAnreden}" SelectedItem="{Binding ZweiteAnrede}" />
+            <TextBlock Text="Vorname" Margin="0,6,0,0" />
+            <TextBox x:Name="SecondFirstName" AutomationProperties.Name="Vorname des zweiten Vertragsnehmers" Text="{Binding ZweiterVorname}" />
+            <TextBlock Text="Nachname" Margin="0,6,0,0" />
+            <TextBox AutomationProperties.Name="Nachname des zweiten Vertragsnehmers" Text="{Binding ZweiterNachname}" />
+            <TextBlock Text="E-Mail (optional)" Margin="0,6,0,0" />
+            <TextBox AutomationProperties.Name="E-Mail des zweiten Vertragsnehmers" Text="{Binding ZweiteEmail}" />
+            <CheckBox x:Name="SharedAddressToggle" Content="Gemeinsame Adresse" IsChecked="{Binding GemeinsameAdresse}" Margin="0,8,0,0" />
+            <StackPanel x:Name="SecondAddressDetails" IsVisible="{Binding HatSeparateAdresse}" Spacing="4">
+                <TextBlock Text="Straße" />
+                <TextBox AutomationProperties.Name="Straße des zweiten Vertragsnehmers" Text="{Binding ZweiteStraße}" />
+                <TextBlock Text="PLZ" Margin="0,6,0,0" />
+                <TextBox AutomationProperties.Name="PLZ des zweiten Vertragsnehmers" Text="{Binding ZweitePlz}" />
+                <TextBlock Text="Ort" Margin="0,6,0,0" />
+                <TextBox AutomationProperties.Name="Ort des zweiten Vertragsnehmers" Text="{Binding ZweiterOrt}" />
+                <TextBlock Text="Rechnungsadresse" Margin="0,10,0,0" />
+                <ComboBox x:Name="BillingAddressChoice" AutomationProperties.Name="Rechnungsadresse" ItemsSource="{Binding Rechnungsadressen}" SelectedIndex="{Binding RechnungsadresseIndex}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <TextBlock Text="Auf der Rechnung werden immer beide Namen aufgeführt." TextWrapping="Wrap" Margin="0,8,0,0" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

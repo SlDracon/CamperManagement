@@ -9,14 +9,14 @@
 | .NET | SDK 10; `global.json` fordert mindestens das Feature-Band 10.0.100 und erlaubt neuere .NET-10-Feature-Bands. Die CI verwendet 10.0.112. |
 | Desktop | Grafische Linux-Sitzung; für das automatische Öffnen exportierter Dateien ein PDF-Viewer |
 | Datenbank | Erreichbare MariaDB mit dem bestehenden CamperManagement-Basisschema; geprüft mit MariaDB 11.8.8 |
-| Datenbankschema | Migrationen 001 und 002 aus dem Repository angewendet |
+| Datenbankschema | Migrationen 001 bis 005 aus dem Repository angewendet |
 | Pakete | Zugriff auf NuGet beim ersten Restore, sofern die Pakete nicht bereits lokal vorhanden sind |
 
 Die Anwendung verbindet sich direkt mit der Datenbank. Sie hat keine lokale Offline-Datenbank und keinen Synchronisierungsdienst. Bei einem VLAN-Wechsel müssen Host, Port und Erreichbarkeit zwischen Arbeitsplatz und Datenbank zusammenpassen.
 
 ## Datenbankverbindung
 
-Beim ersten Start auf einem neuen Gerät erscheint **Datenbank verbinden**. Server/IP-Adresse, Port, Datenbank, Benutzer und Passwort eingeben und **Verbindung prüfen und speichern** wählen. Geprüft werden die Verbindung und der Zugriff auf die aktuellen Standardfaktoren; das setzt das vorhandene Schema einschließlich Migration 002 voraus. Nach erfolgreicher Prüfung werden die Listen geladen. Spätere Änderungen sind unter **Einstellungen → Datenbankverbindung** möglich.
+Beim ersten Start auf einem neuen Gerät erscheint **Datenbank verbinden**. Server/IP-Adresse, Port, Datenbank, Benutzer und Passwort eingeben und **Verbindung prüfen und speichern** wählen. Geprüft werden die Verbindung und der Zugriff auf die aktuellen Standardfaktoren; das setzt die Standardfaktoren aus Migration 002 voraus. Für diese Anwendungsversion muss zusätzlich Migration 003 für zwei Vertragsnehmer, Migration 004 für die Camper-Historie und Migration 005 für begründete Vertragskostenerhöhungen angewendet sein. Nach erfolgreicher Prüfung werden die Listen geladen. Spätere Änderungen sind unter **Einstellungen → Datenbankverbindung** möglich.
 
 Die Konfiguration liegt ausschließlich auf dem jeweiligen Gerät: unter Linux in `~/.local/share/CamperManagement/database.json` (beziehungsweise unter `XDG_DATA_HOME`), unter Windows in `%LOCALAPPDATA%/CamperManagement/database.json` und unter Android im privaten App-Datenverzeichnis. Unter Unix erhalten Verzeichnis und Datei die Rechte 0700 beziehungsweise 0600. Die Datei enthält das Passwort und ist nicht zusätzlich verschlüsselt; nicht teilen oder in Git aufnehmen. Eine Android-Deinstallation entfernt auch die lokale Konfiguration.
 

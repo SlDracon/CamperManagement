@@ -15,6 +15,7 @@
         <TextBlock Text="Platznummer" />
         <TextBox AutomationProperties.Name="Platznummer" Text="{Binding Platznr}" IsReadOnly="True" />
 
+        <TextBlock Text="Erster Vertragsnehmer" FontWeight="SemiBold" Margin="0,16,0,0" />
         <TextBlock Text="Anrede" Margin="0,10,0,0" />
         <ComboBox AutomationProperties.Name="Anrede" IsEnabled="{Binding !IsBusy}" ItemsSource="{Binding Anreden}" SelectedItem="{Binding SelectedAnrede}" />
 
@@ -35,6 +36,8 @@
 
         <TextBlock Text="E-Mail" Margin="0,10,0,0" />
         <TextBox AutomationProperties.Name="E-Mail" IsEnabled="{Binding !IsBusy}" Text="{Binding Email}" />
+
+        <views:ContractPartnerFields />
 
         <TextBlock Text="Vertragskosten" Margin="0,10,0,0" />
         <TextBox AutomationProperties.Name="Vertragskosten" IsEnabled="{Binding !IsBusy}" Text="{Binding VertragskostenText}" />

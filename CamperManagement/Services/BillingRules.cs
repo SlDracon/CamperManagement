@@ -22,6 +22,19 @@ public static class BillingRules
         foreach (var (name, text) in new[] { ("Platznummer", value.Platznr), ("Vorname", value.Vorname), ("Nachname", value.Nachname), ("Straße", value.Straße), ("PLZ", value.PLZ), ("Ort", value.Ort) })
             if (string.IsNullOrWhiteSpace(text))
                 throw new ArgumentException($"{name} ist ein Pflichtfeld.");
+        ValidateContractPartners(value);
+    }
+    public static void ValidateContractPartners(CamperDisplayModel value)
+    {
+        if (!value.HatZweitenVertragsnehmer)
+            return;
+        foreach (var (name, text) in new[] { ("Vorname des zweiten Vertragsnehmers", value.ZweiterVorname), ("Nachname des zweiten Vertragsnehmers", value.ZweiterNachname) })
+            if (string.IsNullOrWhiteSpace(text))
+                throw new ArgumentException($"{name} ist ein Pflichtfeld.");
+        if (!value.GemeinsameAdresse)
+            foreach (var (name, text) in new[] { ("Straße des zweiten Vertragsnehmers", value.ZweiteStraße), ("PLZ des zweiten Vertragsnehmers", value.ZweitePLZ), ("Ort des zweiten Vertragsnehmers", value.ZweiterOrt) })
+                if (string.IsNullOrWhiteSpace(text))
+                    throw new ArgumentException($"{name} ist ein Pflichtfeld.");
     }
     public static bool TryDecimal(string? text, out decimal value) => decimal.TryParse(text?.Trim().Replace(',', '.'), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value);
 }

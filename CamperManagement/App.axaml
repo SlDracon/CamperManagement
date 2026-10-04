@@ -30,6 +30,12 @@
       <DataTemplate DataType="{x:Type viewModels:CamperViewModel}">
         <views:CamperView />
       </DataTemplate>
+      <DataTemplate DataType="{x:Type viewModels:ContractCostIncreaseViewModel}">
+        <views:ContractCostIncreaseView />
+      </DataTemplate>
+      <DataTemplate DataType="{x:Type viewModels:CamperHistoryViewModel}">
+        <views:CamperHistoryView />
+      </DataTemplate>
       <DataTemplate DataType="{x:Type viewModels:AddCamperViewModel}">
         <views:AddCamperView />
       </DataTemplate>
